@@ -1,246 +1,173 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Mar 29 14:13:53 2018
+Created on Fri Nov 22 00:43:45 2019
 
-@author: Harsh
+@author: harshparikh
 """
 
 import numpy as np
 import scipy.optimize as opt
-import sklearn.linear_model as sklm
-from joblib import Parallel, delayed
-from sklearn.metrics.pairwise import pairwise_distances
-import multiprocessing
+import pandas as pd
+import sklearn.linear_model as lm
+import sklearn.ensemble as ensemble
 
 
-X = np.array(None)
-Y = np.array(None)
-T = np.array(None)
-Dparts = []
-dist_mat = {}
-
-Xtest = np.array(None)
-Ytest = np.array(None)
-Ttest = np.array(None)
-DpartsTest = []
-dist_mat_test = {}
-
-def objl(args):
-    i,c,L,K = args
-    Xc,Yc,Tc = Dparts[c]
-#    di = 1/(dist_mat[c][i]+np.finfo(float).eps)
-#    delyi = np.abs(Yc-Yc[i])
-    kni, ykni = kneighbors(i,c,test=False,K=K) #slowstep
-#    w = np.ones( (K,) ) #np.array(list(map( lambda x: np.exp(-1*(0)*self.distance(X[i,:],x,L)), kni ))) 
-    return np.square( Yc[i] - (1.0/K)*np.sum(ykni) )
-
-def kneighbors(i,c,test,K):
-    if test:
-        arr = dist_mat_test[c][i,:]
-        indices = arr.argsort()[:K]
-        Xc, Yc, Tc = DpartsTest[c]
-        kn, ykn = Xc[indices,:], Yc[indices]
-    if not test:
-        arr = dist_mat[c][i,:]
-        indices = arr.argsort()[:K]
-        Xc, Yc, Tc = Dparts[c]
-        kn, ykn = Xc[indices,:], Yc[indices]
-    return kn, ykn
-
-def makeMatchedGroup(args):
-    i,L,k = args
-    mg_i = ([],[],[])
-    parts = len(DpartsTest)
-    for c in range(0,parts):
-        Xc,Yc,Tc = DpartsTest[c]
-        if len(Tc)>0:
-            neighborsX, neighborsY = kneighbors(i,c,test=True,K=k)
-            neighborsT = [Tc[0]]*k
-        if len(neighborsY) > 0:
-            mg_i = ( mg_i[0] + list(neighborsX), mg_i[1] + list(neighborsY), mg_i[2] + list(neighborsT))
-    mg_i = (np.array(mg_i[0]),np.array(mg_i[1]),np.array(mg_i[2]))
-    return mg_i
-
-def ITE(args):
-    (i,di,tp,is_y_continuous) = args
-    (x_i,y_i,t_i) = di
-    if len(np.unique(y_i))<2:
-        return np.zeros( (tp,1) )
-    else:
-        if is_y_continuous:
-            ols = sklm.LinearRegression()
-            olsres = ols.fit(t_i,y_i)
-            beta = np.array(olsres.coef_)
-            return beta
-        else:
-            lr = sklm.LogisticRegression()
-            lrres = lr.fit(t_i,y_i)
-            beta = lrres.coef_
-            return beta
-
-def calc_pairwise_d(X1,X2,L,test=True):
-    n,m = X1.shape
-    n1,_ = X2.shape
-    dist = np.zeros((n,n1))
-    for i in range(0,n):
-        for j in range(0,n1):
-            dist[i,j] = distances.d1(X1[i,:],X2[j,:],L)
-    return dist
-            
-class distances:
-    def d2(xi,xj,L,dcov=[]):
-        p = len(xi)
-        s = np.dot(xi-xj,np.dot(L[:p,:p],xi-xj))
-        xi2d, xj2d, Ld = list(xi[dcov]),list(xj[dcov]),L[p:,p:]
-        for i in range(0,len(dcov)):
-            for j in range(0,i):
-                if i!=j:
-                    xi2d.append( str(xi[dcov[i]])+str(xi[dcov[j]]) )
-                    xj2d.append( str(xj[dcov[i]])+str(xj[dcov[j]]) )
-        c = np.array(np.array(xi2d)==np.array(xj2d)).astype('int')
-        s += np.dot( c , np.dot(Ld,c) )
-        return s
-    
-    def d(xi,xj,L,dcov=None):
-        if dcov is None:
-            dcov = []
-        p = len(xi) - len(dcov)
-        ccov = list(set(np.arange(0,len(xi))) - set (dcov))
-        xic,xjc,Lc = xi[ccov],xj[ccov], (L[:p,:p])*(L[:p,:p])
-        s = np.dot(xic-xjc,np.dot(Lc,xic-xjc))
-        xid,xjd,Ld = xi[dcov],xj[dcov],(L[p:,p:])*(L[p:,p:])
-        s += np.dot( (1 - np.equal(xid,xjd).astype('int')), np.dot(Ld,(1 - np.equal(xid,xjd).astype('int') ) ) )
-        return s
-    
-    def d1(xi,xj,L):
-        return np.dot(xi-xj,np.dot(L**2,xi-xj))
+class malts:
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,gamma=1,epsilon=600):
+        self.C = C #coefficient to regularozation term
+        self.gamma = gamma
+        self.epsilon = epsilon #lambda x: (1 + np.exp( - self.epsilon) )/(1+np.exp( self.gamma * (x - self.epsilon) ) )
+        self.n, self.p = data.shape
+        self.p = self.p - 2#shape of the data
+        self.outcome = outcome
+        self.treatment = treatment
+        self.discrete = discrete
+        self.continuous = set(data.columns).difference(set([outcome]+[treatment]+discrete))
+#        Mc = np.ones((len(self.continuous),)) #initializing the stretch vector 
+#        Md = np.ones((len(self.discrete),)) #initializing the stretch vector 
+        #splitting the data into control and treated units
+        self.df_T = data.loc[data[treatment]==1]
+        self.df_C = data.loc[data[treatment]==0]
+        #extracting relevant covariates (discrete,continuous) 
+        #and outcome. Converting to numpy array.
+        self.Xc_T = self.df_T[self.continuous].to_numpy()
+        self.Xc_C = self.df_C[self.continuous].to_numpy()
+        self.Xd_T = self.df_T[self.discrete].to_numpy()
+        self.Xd_C = self.df_C[self.discrete].to_numpy()
+        self.Y_T = self.df_T[self.outcome].to_numpy()
+        self.Y_C = self.df_C[self.outcome].to_numpy()
+        self.del2_Y_T = ((np.ones((len(self.Y_T),len(self.Y_T)))*self.Y_T).T - (np.ones((len(self.Y_T),len(self.Y_T)))*self.Y_T))**2
+        self.del2_Y_C = ((np.ones((len(self.Y_C),len(self.Y_C)))*self.Y_C).T - (np.ones((len(self.Y_C),len(self.Y_C)))*self.Y_C))**2
         
-    
-class distance_metric_learning:
-    def __init__(self,number_of_covariates,diag=True,dcov=[],K=10,L=None,distance=distances.d):
-        self.discrete = diag
-        if L is None:
-            self.L = np.eye(number_of_covariates)
-        else:
-            self.L = L
-        self.K = K
-        self.num_covariates = number_of_covariates
-        self.dcov = dcov
-        self.distance = lambda xi,xj,Lij: distance(xi,xj,Lij,self.dcov)
+        self.Dc_T = np.ones((self.Xc_T.shape[0],self.Xc_T.shape[1],self.Xc_T.shape[0])) * self.Xc_T.T
+        self.Dc_T = (self.Dc_T - self.Dc_T.T) 
+        self.Dc_C = np.ones((self.Xc_C.shape[0],self.Xc_C.shape[1],self.Xc_C.shape[0])) * self.Xc_C.T
+        self.Dc_C = (self.Dc_C - self.Dc_C.T) 
+        
+        self.Dd_T = np.ones((self.Xd_T.shape[0],self.Xd_T.shape[1],self.Xd_T.shape[0])) * self.Xd_T.T
+        self.Dd_T = (self.Dd_T != self.Dd_T.T) 
+        self.Dd_C = np.ones((self.Xd_C.shape[0],self.Xd_C.shape[1],self.Xd_C.shape[0])) * self.Xd_C.T
+        self.Dd_C = (self.Dd_C != self.Dd_C.T) 
 
+    def threshold(self,x,k=10):
+        for i in range(x.shape[0]):
+            row = x[i,:]
+            row1 = np.where( row < row[np.argpartition(row,k+1)[k+1]],1,0)
+            x[i,:] = row1
+        return x
     
-    def objective(self,c,L):
-        #num_cores = multiprocessing.cpu_count()
-        global dist_mat
-        Xc, Yc, Tc = Dparts[c]
-        nc = len(Xc)
-        dist_mat[c] = calc_pairwise_d(Xc,Xc,L,test=False)
-        K = self.K
-        if nc<K:
-            return 0
-        nargs = [(i,c,L,K) for i in range(0,nc)]
-        obj = 0
-        objarray = np.array(Parallel(n_jobs=(1+(nc//10)),prefer="threads")(delayed(objl)(args) for args in nargs))
-
-        obj = np.sum(objarray)
-        diff = np.linalg.norm(L,ord='nuc')
-        c_coeff = 0.00001
-        cost = c_coeff*diff
-        return obj + cost
+    def distance(self,Mc,Md,xc1,xd1,xc2,xd2):
+        dc = np.dot((Mc**2)*(xc1-xc2),(xc1-xc2))
+        dd = np.sum((Md**2)*xd1!=xd2)
+        return dc+dd
+        
+    def loss_(self, Mc, Md, xc1, xd1, y1, xc2, xd2, y2, gamma=1 ):
+        w12 = np.exp( -1 * gamma * self.distance(Mc,Md,xc1,xd1,xc2,xd2) )
+        return w12*((y1-y2)**2)
     
-    def translate(self,a):
-        s = 0
-        for i in a:
-            s = 2*s + i
-        return int(s)
+    def calcW_T(self,Mc,Md):
+        #this step is slow
+        Dc = np.sum( ( self.Dc_T * (Mc.reshape(-1,1)) )**2, axis=1)
+        Dd = np.sum( ( self.Dd_T * (Md.reshape(-1,1)) )**2, axis=1)
+        W = self.threshold( (Dc + Dd) )
+        W = W / (np.sum(W,axis=1)-np.diag(W)).reshape(-1,1)
+        return W
     
-    def split(self,X1,Y1,T1):
-        if len(T1.shape)==1:
-            tp = 1
-        else:
-            tp = T1.shape[1]
-        parts = 2**tp
-        n,m = X1.shape
-        T1 = np.reshape(T1,(n,tp))
-        dparts = [ ([],[],[]) for itr in range(0,parts) ]
-        for i in range(0,n):
-            part_indx = self.translate(T1[i,:])
-            Xc, Yc, Tc = dparts[part_indx]
-            Xc.append(X1[i,:])
-            Yc.append(Y1[i])
-            Tc.append(T1[i])
-            dparts[part_indx] = (Xc,Yc,Tc)
-        for i in range(0,parts):
-            part = dparts[i]
-            dparts[i] = (np.array(part[0]),np.array(part[1]),np.array(part[2]))
-        return dparts
-                  
-    def optimize(self,X1,Y1,T1,soft=False,numbatch=1,method='COBYLA'):
-        global X, Y, T, Dparts
-        X = X1
-        Y = Y1
-        T = T1
-        n,m = X.shape
-        self.L = np.linalg.inv(np.cov(X,rowvar=False))
-        if len(T.shape)==1:
-            tp = 1
-        else:
-            tp = T.shape[1]
-        parts = 2**tp
-        n,m = X.shape
-        Dparts = self.split(X,Y,T)
-        
-        def obji(Lv,i):
-            L = np.diag(Lv)
-            return self.objective(i,L)
-        
-        def obj(Lv):
-            s = 0
-            for i in range(0,parts):
-                s += obji(Lv,i)
-            return s
-        
-        if self.discrete:
-            result = opt.minimize(obj,np.diag(self.L),method=method) #, options={'maxiter': 200}
-            result.x = np.diag(result.x)
-            self.L = result.x
-        else:
-            result = opt.minimize(obj,self.L.flatten(),method=method) #, options={'maxiter': 200}
-            result.x = np.reshape(result.x,(m,m))
-            self.L = result.x
-        return self.L
+    def calcW_C(self,Mc,Md):
+        #this step is slow
+        Dc = np.sum( ( self.Dc_C * (Mc.reshape(-1,1)) )**2, axis=1)
+        Dd = np.sum( ( self.Dd_C * (Md.reshape(-1,1)) )**2, axis=1)
+        W = self.threshold( (Dc + Dd) )
+        W = W / (np.sum(W,axis=1)-np.diag(W)).reshape(-1,1)
+        return W
     
+    def Delta_(self,Mc,Md):
+        self.W_T = self.calcW_T(Mc,Md)
+        self.W_C = self.calcW_C(Mc,Md)
+        self.delta_T = np.sum((self.Y_T - (np.matmul(self.W_T,self.Y_T) - np.diag(self.W_T)*self.Y_T))**2)
+        self.delta_C = np.sum((self.Y_C - (np.matmul(self.W_C,self.Y_C) - np.diag(self.W_C)*self.Y_C))**2)
+        return self.delta_T + self.delta_C
     
-    def CATE(self,Xtest1,Ytest1,Ttest1,L,K=5,is_y_continuous = True):
-#        num_cores = multiprocessing.cpu_count()
-        global Xtest, Ytest, Ttest, DpartsTest, dist_mat_test
-        Xtest = Xtest1
-        Ytest = Ytest1
-        Ttest = Ttest1
-        ntest,mtest = Xtest.shape
+    def objective(self,M):
+        Mc = M[:len(self.continuous)]
+        Md = M[len(self.continuous):]
+        delta = self.Delta_(Mc,Md)
+        reg = self.C * ( np.linalg.norm(Mc,ord=2)**2 + np.linalg.norm(Md,ord=2)**2 )
+        cons1 = 0 * ( (np.sum(Mc) + np.sum(Md)) - self.p )**2
+        cons2 = 1e+25 * np.sum( ( np.concatenate((Mc,Md)) < 0 ) )
+        return delta + reg + cons1 + cons2
         
-        if len(Ttest.shape)==1:
-            tp = 1
-        else:
-            tp = T.shape[1]
-        parts = 2**tp
-        
-        DpartsTest = self.split(Xtest,Ytest,Ttest)
-        for c in range(0,parts):
-            Xc, Yc, Tc = DpartsTest[c]
-            dist_mat_test[c] = calc_pairwise_d(Xtest,Xc,L,test=True)
-            
-        ntest = len(Xtest)
-        k = K
-        t_hat = []
-        nargs = [(i,L,k) for i in range(0,ntest) ]
-        d = list(Parallel(n_jobs=(1+(ntest//50)), prefer="threads")(delayed(makeMatchedGroup)(args) for args in nargs))
-        
-        nargs1 = [ (i,d[i],tp,is_y_continuous) for i in range(0,ntest) ]
-        t_hat = list(Parallel(n_jobs=(1+(ntest//50)), prefer="threads")(delayed(ITE)(args1) for args1 in nargs1))
-
-        return d,t_hat
+    def fit(self,method='BFGS'):
+        M_init = np.ones((self.p,))
+        res = opt.minimize( self.objective, x0=M_init,method=method )
+        self.M = res.x
+        self.Mc = self.M[:len(self.continuous)]
+        self.Md = self.M[len(self.continuous):]
+        return res
     
-    def ATE(self,Xtest,X,Y,T,fL,is_y_continuous = True):
-        d,t_hat = self.CATE(Xtest,X,Y,T,fL,is_y_continuous)
-        return np.average(t_hat,axis=0)
+    def get_matched_groups(self, df_estimation, k=10 ):
+        #units to be matched
+        Xc = df_estimation[self.continuous].to_numpy()
+        Xd = df_estimation[self.discrete].to_numpy()
+        Y = df_estimation[self.outcome].to_numpy()
+        T = df_estimation[self.treatment].to_numpy()
+        #splitted estimation data for matching
+        df_T = df_estimation.loc[df_estimation[self.treatment]==1]
+        df_C = df_estimation.loc[df_estimation[self.treatment]==0]
+        #converting to numpy array
+        Xc_T = df_T[self.continuous].to_numpy()
+        Xc_C = df_C[self.continuous].to_numpy()
+        Xd_T = df_T[self.discrete].to_numpy()
+        Xd_C = df_C[self.discrete].to_numpy()
+        Y_T = df_T[self.outcome].to_numpy()
+        Y_C = df_C[self.outcome].to_numpy()
+        D_T = np.zeros((Y.shape[0],Y_T.shape[0]))
+        D_C = np.zeros((Y.shape[0],Y_C.shape[0]))
+        #distance_treated
+        Dc_T = (np.ones((Xc_T.shape[0],Xc.shape[1],Xc.shape[0])) * Xc.T - (np.ones((Xc.shape[0],Xc.shape[1],Xc_T.shape[0])) * Xc_T.T).T)
+        Dc_T = np.sum( (Dc_T * (self.Mc.reshape(-1,1)) )**2 , axis=1 )
+        Dd_T = (np.ones((Xd_T.shape[0],Xd.shape[1],Xd.shape[0])) * Xd.T != (np.ones((Xd.shape[0],Xd.shape[1],Xd_T.shape[0])) * Xd_T.T).T )
+        Dd_T = np.sum( (Dd_T * (self.Md.reshape(-1,1)) )**2 , axis=1 )
+        D_T = (Dc_T + Dd_T).T
+        #distance_control
+        Dc_C = (np.ones((Xc_C.shape[0],Xc.shape[1],Xc.shape[0])) * Xc.T - (np.ones((Xc.shape[0],Xc.shape[1],Xc_C.shape[0])) * Xc_C.T).T)
+        Dc_C = np.sum( (Dc_C * (self.Mc.reshape(-1,1)) )**2 , axis=1 )
+        Dd_C = (np.ones((Xd_C.shape[0],Xd.shape[1],Xd.shape[0])) * Xd.T != (np.ones((Xd.shape[0],Xd.shape[1],Xd_C.shape[0])) * Xd_C.T).T )
+        Dd_C = np.sum( (Dd_C * (self.Md.reshape(-1,1)) )**2 , axis=1 )
+        D_C = (Dc_C + Dd_C).T
+        MG = {}
+        for i in range(Y.shape[0]):
+            #finding k closest control units to unit i
+            idx = np.argpartition(D_C[i,:],k)
+            matched_Xc_C, matched_Xd_C, matched_Y_C, d_array_C = Xc_C[idx[:k],:], Xd_C[idx[:k],:], Y_C[idx[:k]], D_C[i,idx[:k]]
+            #finding k closest treated units to unit i
+            idx = np.argpartition(D_T[i,:],k)
+            matched_Xc_T, matched_Xd_T, matched_Y_T, d_array_T = Xc_T[idx[:k],:], Xd_T[idx[:k],:], Y_T[idx[:k]],D_T[i,idx[:k]]
+            MG[i] = {'unit':[ Xc[i], Xd[i], Y[i], T[i] ] ,'control':[ matched_Xc_C, matched_Xd_C, matched_Y_C, d_array_C],'treated':[matched_Xc_T, matched_Xd_T, matched_Y_T, d_array_T ]}
+        return MG
+    
+    def CATE(self,MG,outcome_discrete=False,model='linear'):
+        cate = {}
+        for k,v in MG.items():
+            #control
+            matched_X_C = np.hstack((v['control'][0],v['control'][1]))
+            matched_Y_C = v['control'][2]
+            #treated
+            matched_X_T = np.hstack((v['treated'][0], v['treated'][1]))
+            matched_Y_T = v['treated'][2]
+            x = np.hstack(([v['unit'][0]], [v['unit'][1]]))
+            if not outcome_discrete:
+                if model=='mean':
+                    yt = np.mean(matched_Y_T)
+                    yc = np.mean(matched_Y_C)
+                    cate[k] = {'CATE': yt - yc,'outcome':v['unit'][2],'treatment':v['unit'][3] }
+                if model=='linear':
+                    yc = lm.Ridge().fit( X = matched_X_C, y = matched_Y_C )
+                    yt = lm.Ridge().fit( X = matched_X_T, y = matched_Y_T )
+                    cate[k] = {'CATE': yt.predict(x) - yc.predict(x),'outcome':v['unit'][2],'treatment':v['unit'][3] }
+                if model=='RF':
+                    yc = ensemble.RandomForestRegressor().fit( X = matched_X_C, y = matched_Y_C )
+                    yt = ensemble.RandomForestRegressor().fit( X = matched_X_T, y = matched_Y_T )
+                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0],'outcome':v['unit'][2],'treatment':v['unit'][3] }
+        return pd.DataFrame.from_dict(cate,orient='index')
