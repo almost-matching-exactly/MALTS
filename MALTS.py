@@ -11,12 +11,15 @@ import scipy.optimize as opt
 import pandas as pd
 import sklearn.linear_model as lm
 import sklearn.ensemble as ensemble
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 class malts:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,gamma=1,epsilon=600):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,gamma=1,epsilon=600,k=10):
         self.C = C #coefficient to regularozation term
         self.gamma = gamma
+        self.k = k
         self.epsilon = epsilon #lambda x: (1 + np.exp( - self.epsilon) )/(1+np.exp( self.gamma * (x - self.epsilon) ) )
         self.n, self.p = data.shape
         self.p = self.p - 2#shape of the data
@@ -50,7 +53,8 @@ class malts:
         self.Dd_C = np.ones((self.Xd_C.shape[0],self.Xd_C.shape[1],self.Xd_C.shape[0])) * self.Xd_C.T
         self.Dd_C = (self.Dd_C != self.Dd_C.T) 
 
-    def threshold(self,x,k=10):
+    def threshold(self,x):
+        k = self.k
         for i in range(x.shape[0]):
             row = x[i,:]
             row1 = np.where( row < row[np.argpartition(row,k+1)[k+1]],1,0)
@@ -171,3 +175,22 @@ class malts:
                     yt = ensemble.RandomForestRegressor().fit( X = matched_X_T, y = matched_Y_T )
                     cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0],'outcome':v['unit'][2],'treatment':v['unit'][3] }
         return pd.DataFrame.from_dict(cate,orient='index')
+    
+    def visualizeMG(self,MG,a):
+        MGi = MG[a]
+        k = len(MGi['control'][2])
+        Xc = np.vstack( (MGi['control'][0],MGi['treated'][0]) )
+        Xd = np.vstack( (MGi['control'][1],MGi['treated'][1]) )
+        df = pd.DataFrame(np.hstack( (Xc,Xd) ))
+        T = np.array([0 for i in range(0,k)] + [1 for i in range(0,k)])
+        df['T'] = T
+        df['Y'] = np.hstack( (MGi['control'][2],MGi['treated'][2]) )
+        fig,axs = plt.subplots(nrows=int(np.ceil(len(df.columns)/4)),ncols=4,squeeze=False, sharey=True, figsize=(5*int(np.ceil(len(df.columns)/4)),20))
+        for i, col in enumerate(df.columns):
+            sns.scatterplot(x=col,y='Y',data=df,hue='T',ax=axs[int(i/4),i%4])
+        plt.tight_layout()
+        fig.savefig('matched_group_%d.png'%(a))
+        fig = plt.Figure(figsize=(15,20))
+        pd.plotting.parallel_coordinates(df,'T')
+        fig.savefig('parallel_coordinate_matched_group_%d.png'%(a))
+        return df
