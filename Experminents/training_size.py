@@ -54,4 +54,5 @@ for i in range(0,10):
             'test err': [np.mean(err_malts_linear)]
             })
         df_err = df_err.append(df2, ignore_index = True)
-    
+
+df_err.to_csv('training_set_experiment.csv')
