@@ -13,7 +13,7 @@ import sklearn.linear_model as lm
 import sklearn.ensemble as ensemble
 import seaborn as sns
 import matplotlib.pyplot as plt
-
+import matplotlib.patches as patches
 
 class malts:
     def __init__(self,outcome,treatment,data,discrete=[],C=1,gamma=1,epsilon=600,k=10):
@@ -194,3 +194,28 @@ class malts:
         pd.plotting.parallel_coordinates(df,'T')
         fig.savefig('parallel_coordinate_matched_group_%d.png'%(a))
         return df
+    
+    def visualizeDimension(self,MG,x1,x2):
+        X = []
+        fig,ax = plt.subplots(1)
+        for k,MGi in MG.items():
+            x = np.hstack( (MGi['unit'][0],MGi['unit'][0]) )[ [ x1, x2 ] ]
+            X.append(x)
+            Xc = np.vstack( (MGi['control'][0],MGi['treated'][0]) )
+            Xd = np.vstack( (MGi['control'][1],MGi['treated'][1]) )
+            Xm = np.hstack((Xc,Xd))[:,[x1,x2]]
+            x1min,x1max = np.min(Xm[:,0]), np.max(Xm[:,0])
+            x2min,x2max = np.min(Xm[:,1]), np.max(Xm[:,1])
+            rect = patches.Rectangle(x-np.array([(x1max-x1min)/2,(x2max-x2min)/2]),width=x1max-x1min,height=x2max-x2min,linewidth=1,edgecolor='r',facecolor='grey',alpha=0.06)
+            ax.add_patch(rect)
+        X = np.array(X)
+        plt.scatter(X[:,0],X[:,1])
+        fig.savefig('marginal_%d_%d_matched_groups.png')
+        return X
+        
+            
+        
+        
+        
+        
+        
