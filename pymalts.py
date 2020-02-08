@@ -102,7 +102,7 @@ class malts:
         cons2 = 1e+25 * np.sum( ( np.concatenate((Mc,Md)) < 0 ) )
         return delta + reg + cons1 + cons2
         
-    def fit(self,method='BFGS'):
+    def fit(self,method='COBYLA'):
         M_init = np.ones((self.p,))
         res = opt.minimize( self.objective, x0=M_init,method=method )
         self.M = res.x
