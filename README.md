@@ -18,8 +18,8 @@ We use pandas to read the data from CSV file into a dataframe but you can use yo
 
 
 ```python
-df_train = pd.read_csv('example_training.csv')
-df_est = pd.read_csv('example_estimation.csv')
+df_train = pd.read_csv('example/example_training.csv')
+df_est = pd.read_csv('example/example_estimation.csv')
 ```
 
 Looking at first few rows of the training data and estimation data.
@@ -515,7 +515,7 @@ df_mg1 = m.visualizeMG( MG=mg, a=1 )
 ```
 
 
-![png](output_22_0.png)
+![png](example/output_22_0.png)
 
 
 
