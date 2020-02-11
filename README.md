@@ -10,6 +10,8 @@ PyMALTS is a Python3 library and it requires numpy, pandas, scikit-learn, matplo
 import pymalts
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 np.random.seed(0)
 ```
 
@@ -33,7 +35,19 @@ df_train.head()
 
 
 <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
 
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -198,7 +212,19 @@ df_est.head()
 
 
 <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
 
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -358,9 +384,8 @@ df_est.head()
 ## Distance metric learning
 Setting up the model for learning the distance metric.
 
-Variable name for the outcome variable: $\textit{'outcome'}$ 
-
-Variable name for the treatment variable: $\textit{'treated'}$
+1) Variable name for the outcome variable: 'outcome'. 
+2) Variable name for the treatment variable: 'treated'
 
 
 ```python
@@ -400,7 +425,19 @@ cate.head()
 
 
 <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
 
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -413,31 +450,31 @@ cate.head()
   <tbody>
     <tr>
       <th>0</th>
-      <td>78.196989</td>
+      <td>76.762988</td>
       <td>-15.679894</td>
       <td>0</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>30.145841</td>
+      <td>34.577985</td>
       <td>-7.068587</td>
       <td>0</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>34.121748</td>
+      <td>34.373115</td>
       <td>-5.133200</td>
       <td>0</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>48.644948</td>
+      <td>49.957180</td>
       <td>39.684984</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>9.144664</td>
+      <td>0.614100</td>
       <td>-2.954324</td>
       <td>0</td>
     </tr>
@@ -459,7 +496,19 @@ cate_mean.head()
 
 
 <div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
 
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
 <table border="1" class="dataframe">
   <thead>
     <tr style="text-align: right;">
@@ -472,37 +521,73 @@ cate_mean.head()
   <tbody>
     <tr>
       <th>0</th>
-      <td>62.709943</td>
+      <td>67.111285</td>
       <td>-15.679894</td>
       <td>0</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>30.911197</td>
+      <td>39.453586</td>
       <td>-7.068587</td>
       <td>0</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>35.188024</td>
+      <td>39.651043</td>
       <td>-5.133200</td>
       <td>0</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>48.050640</td>
+      <td>49.590308</td>
       <td>39.684984</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>15.307376</td>
+      <td>23.857650</td>
       <td>-2.954324</td>
       <td>0</td>
     </tr>
   </tbody>
 </table>
 </div>
+
+
+
+Plotting the probability distribution of CATE.
+
+
+```python
+sns.distplot(cate['CATE'])
+plt.axvline(np.mean(cate['CATE']),c='red')
+plt.axvline(np.median(cate['CATE']),c='blue')
+```
+
+
+
+
+    <matplotlib.lines.Line2D at 0x1a1ebde0d0>
+
+
+
+
+![png](example/output_21_1.png)
+
+
+## Estimating the Average Treatment Effect (ATE)
+We use law of iterated expectation to estimate ATE. Thus, we use 
+
+
+```python
+ate = np.mean(cate['CATE'])
+ate
+```
+
+
+
+
+    43.12022473817754
 
 
 
@@ -515,10 +600,5 @@ df_mg1 = m.visualizeMG( MG=mg, a=1 )
 ```
 
 
-![png](example/output_22_0.png)
+![png](example/output_25_0.png)
 
-
-
-```python
-
-```
