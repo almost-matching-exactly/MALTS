@@ -26,7 +26,7 @@ class malts:
         self.outcome = outcome
         self.treatment = treatment
         self.discrete = discrete
-        self.continuous = set(data.columns).difference(set([outcome]+[treatment]+discrete))
+        self.continuous = list(set(data.columns).difference(set([outcome]+[treatment]+discrete)))
 #        Mc = np.ones((len(self.continuous),)) #initializing the stretch vector 
 #        Md = np.ones((len(self.discrete),)) #initializing the stretch vector 
         #splitting the data into control and treated units
@@ -169,7 +169,7 @@ class malts:
                 if model=='linear':
                     yc = lm.Ridge().fit( X = matched_X_C, y = matched_Y_C )
                     yt = lm.Ridge().fit( X = matched_X_T, y = matched_Y_T )
-                    cate[k] = {'CATE': yt.predict(x) - yc.predict(x),'outcome':v['unit'][2],'treatment':v['unit'][3] }
+                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0],'outcome':v['unit'][2],'treatment':v['unit'][3] }
                 if model=='RF':
                     yc = ensemble.RandomForestRegressor().fit( X = matched_X_C, y = matched_Y_C )
                     yt = ensemble.RandomForestRegressor().fit( X = matched_X_T, y = matched_Y_T )
@@ -181,19 +181,30 @@ class malts:
         k = len(MGi['control'][2])
         Xc = np.vstack( (MGi['control'][0],MGi['treated'][0]) )
         Xd = np.vstack( (MGi['control'][1],MGi['treated'][1]) )
-        df = pd.DataFrame(np.hstack( (Xc,Xd) ))
-        T = np.array([0 for i in range(0,k)] + [1 for i in range(0,k)])
-        df['T'] = T
-        df['Y'] = np.hstack( (MGi['control'][2],MGi['treated'][2]) )
-        fig,axs = plt.subplots(nrows=int(np.ceil(len(df.columns)/4)),ncols=4,squeeze=False, sharey=True, figsize=(5*int(np.ceil(len(df.columns)/4)),20))
-        for i, col in enumerate(df.columns):
-            sns.scatterplot(x=col,y='Y',data=df,hue='T',ax=axs[int(i/4),i%4])
-        plt.tight_layout()
+        df = pd.DataFrame(np.hstack( (Xc,Xd) ),columns=(self.continuous+self.discrete))
+        
+        df.index.names = ['Unit']
+        df.columns.names = ['Covariate']
+        tidy = df.stack().to_frame().reset_index().rename(columns={0: 'Covariate Value'})
+        df[self.treatment] = np.array([0 for i in range(0,k)] + [1 for i in range(0,k)])
+        
+        T = np.array([0 for i in range(0,k*self.p)] + [1 for i in range(0,k*self.p)])
+        tidy[self.treatment] = T
+        
+        y0 = np.ones((self.p,k)) * MGi['control'][2]
+        y0 = y0.flatten('F')
+        y1 = np.ones((self.p,k)) * MGi['treated'][2]
+        y1 = y0.flatten('F')
+        tidy[self.outcome] = np.hstack( (y0,y1) )
+        fig = plt.figure()
+        sns.lmplot(sharey=False,sharex=False,x='Covariate Value',y='outcome',hue='treated',col='Covariate', data=tidy, col_wrap=3, height=4)
         fig.savefig('matched_group_%d.png'%(a))
-        fig = plt.Figure(figsize=(15,20))
-        pd.plotting.parallel_coordinates(df,'T')
+        
+        fig = plt.figure(figsize=(15,20))
+        pd.plotting.parallel_coordinates(df,self.treatment,colormap=plt.cm.Set1)
         fig.savefig('parallel_coordinate_matched_group_%d.png'%(a))
-        return df
+        
+        return tidy
     
     def visualizeDimension(self,MG,x1,x2):
         X = []
@@ -212,10 +223,3 @@ class malts:
         plt.scatter(X[:,0],X[:,1])
         fig.savefig('marginal_%d_%d_matched_groups.png')
         return X
-        
-            
-        
-        
-        
-        
-        
