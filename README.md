@@ -20,8 +20,8 @@ We use pandas to read the data from CSV file into a dataframe but you can use yo
 
 
 ```python
-df_train = pd.read_csv('example/example_training.csv')
-df_est = pd.read_csv('example/example_estimation.csv')
+df_train = pd.read_csv('example/example_training.csv',index_col=0)
+df_est = pd.read_csv('example/example_estimation.csv',index_col=0)
 ```
 
 Looking at first few rows of the training data and estimation data.
@@ -40,33 +40,31 @@ df_train.head()
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>Unnamed: 0</th>
-      <th>0</th>
-      <th>1</th>
-      <th>2</th>
-      <th>3</th>
-      <th>4</th>
-      <th>5</th>
-      <th>6</th>
-      <th>7</th>
-      <th>8</th>
-      <th>...</th>
-      <th>10</th>
-      <th>11</th>
-      <th>12</th>
-      <th>13</th>
-      <th>14</th>
-      <th>15</th>
-      <th>16</th>
-      <th>17</th>
+      <th>X1</th>
+      <th>X2</th>
+      <th>X3</th>
+      <th>X4</th>
+      <th>X5</th>
+      <th>X6</th>
+      <th>X7</th>
+      <th>X8</th>
+      <th>X9</th>
+      <th>X10</th>
+      <th>X11</th>
+      <th>X12</th>
+      <th>X13</th>
+      <th>X14</th>
+      <th>X15</th>
+      <th>X16</th>
+      <th>X17</th>
+      <th>X18</th>
       <th>outcome</th>
       <th>treated</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
-      <td>452</td>
+      <th>452</th>
       <td>1.819048</td>
       <td>1.647819</td>
       <td>1.308953</td>
@@ -76,7 +74,7 @@ df_train.head()
       <td>1.350102</td>
       <td>1.680756</td>
       <td>1.461630</td>
-      <td>...</td>
+      <td>0.182236</td>
       <td>1.814832</td>
       <td>2.414663</td>
       <td>1.349697</td>
@@ -89,8 +87,7 @@ df_train.head()
       <td>1</td>
     </tr>
     <tr>
-      <th>1</th>
-      <td>470</td>
+      <th>470</th>
       <td>0.391609</td>
       <td>1.680689</td>
       <td>0.800403</td>
@@ -100,7 +97,7 @@ df_train.head()
       <td>1.089567</td>
       <td>1.135084</td>
       <td>1.573440</td>
-      <td>...</td>
+      <td>2.104325</td>
       <td>2.164498</td>
       <td>0.770808</td>
       <td>2.872847</td>
@@ -113,8 +110,7 @@ df_train.head()
       <td>0</td>
     </tr>
     <tr>
-      <th>2</th>
-      <td>311</td>
+      <th>311</th>
       <td>2.002644</td>
       <td>1.936058</td>
       <td>1.684250</td>
@@ -124,7 +120,7 @@ df_train.head()
       <td>1.506828</td>
       <td>2.023798</td>
       <td>-1.818878</td>
-      <td>...</td>
+      <td>-0.173793</td>
       <td>-1.103308</td>
       <td>-1.182929</td>
       <td>-0.728503</td>
@@ -137,8 +133,7 @@ df_train.head()
       <td>0</td>
     </tr>
     <tr>
-      <th>3</th>
-      <td>243</td>
+      <th>243</th>
       <td>0.944754</td>
       <td>1.165708</td>
       <td>0.932396</td>
@@ -148,7 +143,7 @@ df_train.head()
       <td>0.537563</td>
       <td>0.692490</td>
       <td>-1.447944</td>
-      <td>...</td>
+      <td>-1.974136</td>
       <td>2.079438</td>
       <td>1.496016</td>
       <td>0.418019</td>
@@ -161,8 +156,7 @@ df_train.head()
       <td>0</td>
     </tr>
     <tr>
-      <th>4</th>
-      <td>155</td>
+      <th>155</th>
       <td>2.390528</td>
       <td>1.509044</td>
       <td>1.675889</td>
@@ -172,7 +166,7 @@ df_train.head()
       <td>1.755178</td>
       <td>1.312119</td>
       <td>-2.048745</td>
-      <td>...</td>
+      <td>0.335748</td>
       <td>2.007166</td>
       <td>2.626542</td>
       <td>1.414703</td>
@@ -186,7 +180,6 @@ df_train.head()
     </tr>
   </tbody>
 </table>
-<p>5 rows × 21 columns</p>
 </div>
 
 
@@ -205,33 +198,31 @@ df_est.head()
   <thead>
     <tr style="text-align: right;">
       <th></th>
-      <th>Unnamed: 0</th>
-      <th>0</th>
-      <th>1</th>
-      <th>2</th>
-      <th>3</th>
-      <th>4</th>
-      <th>5</th>
-      <th>6</th>
-      <th>7</th>
-      <th>8</th>
-      <th>...</th>
-      <th>10</th>
-      <th>11</th>
-      <th>12</th>
-      <th>13</th>
-      <th>14</th>
-      <th>15</th>
-      <th>16</th>
-      <th>17</th>
+      <th>X1</th>
+      <th>X2</th>
+      <th>X3</th>
+      <th>X4</th>
+      <th>X5</th>
+      <th>X6</th>
+      <th>X7</th>
+      <th>X8</th>
+      <th>X9</th>
+      <th>X10</th>
+      <th>X11</th>
+      <th>X12</th>
+      <th>X13</th>
+      <th>X14</th>
+      <th>X15</th>
+      <th>X16</th>
+      <th>X17</th>
+      <th>X18</th>
       <th>outcome</th>
       <th>treated</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <th>0</th>
-      <td>1355</td>
+      <th>1355</th>
       <td>1.881335</td>
       <td>1.684164</td>
       <td>0.532332</td>
@@ -241,7 +232,7 @@ df_est.head()
       <td>1.974763</td>
       <td>1.321659</td>
       <td>0.709443</td>
-      <td>...</td>
+      <td>-1.141244</td>
       <td>0.883130</td>
       <td>0.956721</td>
       <td>2.498229</td>
@@ -254,8 +245,7 @@ df_est.head()
       <td>0</td>
     </tr>
     <tr>
-      <th>1</th>
-      <td>1320</td>
+      <th>1320</th>
       <td>0.666476</td>
       <td>1.263065</td>
       <td>0.657558</td>
@@ -265,7 +255,7 @@ df_est.head()
       <td>0.881916</td>
       <td>0.740392</td>
       <td>2.780857</td>
-      <td>...</td>
+      <td>-0.765889</td>
       <td>1.230980</td>
       <td>-1.214324</td>
       <td>-0.040029</td>
@@ -278,8 +268,7 @@ df_est.head()
       <td>0</td>
     </tr>
     <tr>
-      <th>2</th>
-      <td>1233</td>
+      <th>1233</th>
       <td>-0.193200</td>
       <td>0.961823</td>
       <td>1.652723</td>
@@ -289,7 +278,7 @@ df_est.head()
       <td>0.775715</td>
       <td>0.938379</td>
       <td>-2.055124</td>
-      <td>...</td>
+      <td>1.942873</td>
       <td>-0.606074</td>
       <td>3.329552</td>
       <td>-1.822938</td>
@@ -302,8 +291,7 @@ df_est.head()
       <td>0</td>
     </tr>
     <tr>
-      <th>3</th>
-      <td>706</td>
+      <th>706</th>
       <td>1.378660</td>
       <td>1.794625</td>
       <td>0.701158</td>
@@ -313,7 +301,7 @@ df_est.head()
       <td>0.845063</td>
       <td>1.217270</td>
       <td>5.847379</td>
-      <td>...</td>
+      <td>0.566517</td>
       <td>-0.045607</td>
       <td>0.736230</td>
       <td>0.941677</td>
@@ -326,8 +314,7 @@ df_est.head()
       <td>1</td>
     </tr>
     <tr>
-      <th>4</th>
-      <td>438</td>
+      <th>438</th>
       <td>0.434297</td>
       <td>0.296656</td>
       <td>0.545785</td>
@@ -337,7 +324,7 @@ df_est.head()
       <td>0.601965</td>
       <td>0.499884</td>
       <td>-0.973684</td>
-      <td>...</td>
+      <td>-0.552586</td>
       <td>-0.778477</td>
       <td>0.936956</td>
       <td>0.831105</td>
@@ -351,7 +338,6 @@ df_est.head()
     </tr>
   </tbody>
 </table>
-<p>5 rows × 21 columns</p>
 </div>
 
 
@@ -414,31 +400,31 @@ cate.head()
   <tbody>
     <tr>
       <th>0</th>
-      <td>76.762988</td>
+      <td>72.115699</td>
       <td>-15.679894</td>
       <td>0</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>34.577985</td>
+      <td>23.664641</td>
       <td>-7.068587</td>
       <td>0</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>34.373115</td>
+      <td>29.161183</td>
       <td>-5.133200</td>
       <td>0</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>49.957180</td>
+      <td>52.595566</td>
       <td>39.684984</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>0.614100</td>
+      <td>4.643755</td>
       <td>-2.954324</td>
       <td>0</td>
     </tr>
@@ -473,31 +459,31 @@ cate_mean.head()
   <tbody>
     <tr>
       <th>0</th>
-      <td>67.111285</td>
+      <td>64.714527</td>
       <td>-15.679894</td>
       <td>0</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>39.453586</td>
+      <td>28.313943</td>
       <td>-7.068587</td>
       <td>0</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>39.651043</td>
+      <td>26.927607</td>
       <td>-5.133200</td>
       <td>0</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>49.590308</td>
+      <td>52.828022</td>
       <td>39.684984</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>23.857650</td>
+      <td>5.914307</td>
       <td>-2.954324</td>
       <td>0</td>
     </tr>
@@ -519,7 +505,7 @@ plt.axvline(np.median(cate['CATE']),c='blue')
 
 
 
-    <matplotlib.lines.Line2D at 0x1a1ebde0d0>
+    <matplotlib.lines.Line2D at 0x1a176aed10>
 
 
 
@@ -539,7 +525,7 @@ ate
 
 
 
-    43.12022473817754
+    41.709461029592596
 
 
 
@@ -548,9 +534,22 @@ PyMALTS also provides tools to visualize inside each matched group. The tools pl
 
 
 ```python
-df_mg1 = m.visualizeMG( MG=mg, a=1 )
+df_mg1 = m.visualizeMG( MG=mg, a=10 )
 ```
 
 
-![png](example/output_25_0.png)
+    <Figure size 432x288 with 0 Axes>
 
+
+
+![png](example/output_25_1.png)
+
+
+
+![png](example/output_25_2.png)
+
+
+
+```python
+
+```
