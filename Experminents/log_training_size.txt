@@ -1,0 +1,17 @@
+TRAINING SIZE EXPERIMENT
+   training set size  num important cov  ...  training objective  relative test err
+0                100                  8  ...          5445.42675           0.160897
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                100                  8  ...         1928.259984            0.16901
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                200                  8  ...         6994.955745           0.156766
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                200                  8  ...         9488.139294           0.157961
+
+[1 rows x 5 columns]

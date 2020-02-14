@@ -15,27 +15,30 @@ import warnings
 warnings.filterwarnings("ignore")
 
 df_err = pd.DataFrame(columns=['training set size','num important cov','total num cov','training objective','test err'])
+log = open('log_training_size.txt','w+')
+print('TRAINING SIZE EXPERIMENT',file=log)
+log.close()
 
-for i in range(0,10):
+for i in range(0,2):
     np.random.seed(0)
-    for trial in range(5):
+    num_cov_dense = 8
+    num_covs_unimportant = 10
+    n_est = 2000
+    num_covariates = num_cov_dense+num_covs_unimportant
+    df_est,_,_ = dg.data_generation_dense_endo(n_est, num_cov_dense, num_covs_unimportant,rho=0.2)
+    df_est = df_est.drop(columns = 'matched')
+    Xtest,Ytest,Ttest = np.array(df_est[df_est.columns[0:num_covariates]]), np.array(df_est['outcome']), np.array(df_est['treated'])
+    np.random.seed(0)
+    for trial in range(2):
         numExample = 100 * (2**i)
-        num_cov_dense = 8
-        num_covs_unimportant = 10
-        n_est = 2000
-        num_covariates = num_cov_dense+num_covs_unimportant
     
         data = dg.data_generation_dense_endo(numExample, num_cov_dense, num_covs_unimportant,rho=0.2)
         df, dense_bs, treatment_eff_coef = data
         df_train = df.drop(columns = 'matched')
         X,Y,T = np.array(df_train[df_train.columns[0:num_covariates]]), np.array(df_train['outcome']), np.array(df_train['treated'])
         
-        df_est,_,_ = dg.data_generation_dense_endo(n_est, num_cov_dense, num_covs_unimportant,rho=0.2)
-        df_est = df_est.drop(columns = 'matched')
-        
-        Xtest,Ytest,Ttest = np.array(df_est[df_est.columns[0:num_covariates]]), np.array(df_est['outcome']), np.array(df_est['treated'])
         t_true = np.dot((Xtest[:,:len(treatment_eff_coef)]),treatment_eff_coef) + np.sum(dg.construct_sec_order(Xtest[:,:num_cov_dense]), axis=1)
-        print(dense_bs)
+        print((i,trial))
         
         #del Xtest,Ytest,Ttest,df,dense_bs, treatment_eff_coef
         
@@ -51,8 +54,13 @@ for i in range(0,10):
             'num important cov': [num_cov_dense],
             'total num cov': [num_cov_dense+num_covs_unimportant],
             'training objective': [m.objective(m.M)],
-            'test err': [np.mean(err_malts_linear)]
+            'relative test err': [np.mean(err_malts_linear)/np.mean(t_true)]
             })
+        log = open('log_training_size.txt','a+')
+        print(df2,file=log)
         df_err = df_err.append(df2, ignore_index = True)
+        log.close()
 
-df_err.to_csv('training_set_experiment.csv')
+fig = plt.figure(figsize=(15,15))
+sns.lineplot(data=df_err,x='training set size',y='relative test err')
+fig.savefig('training_set_size_1.png')
