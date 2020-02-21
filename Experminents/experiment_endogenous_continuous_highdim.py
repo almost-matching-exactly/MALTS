@@ -17,10 +17,10 @@ warnings.filterwarnings("ignore")
 
 np.random.seed(0)
 
-numExample = 1000
-num_cov_dense = 10
-num_covs_unimportant = 25
-n_est = 1500
+numExample = 2000
+num_cov_dense = 200
+num_covs_unimportant = 800
+n_est = 5000
 num_covariates = num_cov_dense+num_covs_unimportant
 
 df_train, df_true_train = dg.data_generation_dense_endo(numExample, num_cov_dense, num_covs_unimportant,rho=0)
@@ -38,15 +38,14 @@ m = pymalts.malts('Y','T',data=df_train, discrete=[], C=5,k=10)
 res = m.fit()
 print(res.x)
 
-mg = m.get_matched_groups(df_est,50)
+mg = m.get_matched_groups(df_est,180)
 
 # cate_mean = m.CATE(mg,model='mean')
 cate_linear = m.CATE(mg,model='linear')
 # cate_RF = m.CATE(mg,model='RF')
 
 fig, ax = plt.subplots()
-plt.scatter(t_true,cate_linear['CATE'],alpha=0.2,c=cate_linear['treatment'])
-plt.colorbar(ticks=[0,1])
+plt.scatter(t_true,cate_linear['CATE'],alpha=0.4,c=cate_linear['treatment'])
 lims = [
     np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
     np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
@@ -56,9 +55,7 @@ ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
 ax.set_aspect('equal')
 ax.set_xlim(lims)
 ax.set_ylim(lims)
-plt.xlabel('True CATE')
-plt.ylabel('Estimated CATE')
-fig.savefig('Figures/trueVSestimatedCATE_malts_linear.png')
+fig.savefig('trueVSestimatedCATE_malts_linear_highdim.png')
 
 err_malts_mean = [] #list( np.array(list( np.abs(t_true - cate_mean['CATE']) )) )
 err_malts_linear = list(np.array(list( np.abs(t_true - cate_linear['CATE']) ))/ate_true )
@@ -214,12 +211,12 @@ sns.boxenplot(x='Method',y='Relative CATE Error (percentage)',data=err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
-fig.savefig('Figures/boxplot_malts.png')
+fig.savefig('boxplot_malts_highdim.png')
  
 fig, ax = plt.subplots(figsize=(40,50))
 sns.violinplot(x='Method',y='Relative CATE Error (percentage)',data=err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
-fig.savefig('Figures/violin_malts.png')
+fig.savefig('violin_malts_highdim.png')
 

@@ -35,12 +35,12 @@ class malts:
         self.df_C = data.loc[data[treatment]==0]
         #extracting relevant covariates (discrete,continuous) 
         #and outcome. Converting to numpy array.
-        self.Xc_T = self.df_T[self.continuous].to_numpy()
-        self.Xc_C = self.df_C[self.continuous].to_numpy()
-        self.Xd_T = self.df_T[self.discrete].to_numpy()
-        self.Xd_C = self.df_C[self.discrete].to_numpy()
-        self.Y_T = self.df_T[self.outcome].to_numpy()
-        self.Y_C = self.df_C[self.outcome].to_numpy()
+        self.Xc_T = self.df_T[self.continuous].to_numpy(copy=True)
+        self.Xc_C = self.df_C[self.continuous].to_numpy(copy=True)
+        self.Xd_T = self.df_T[self.discrete].to_numpy(copy=True)
+        self.Xd_C = self.df_C[self.discrete].to_numpy(copy=True)
+        self.Y_T = self.df_T[self.outcome].to_numpy(copy=True)
+        self.Y_C = self.df_C[self.outcome].to_numpy(copy=True)
         self.del2_Y_T = ((np.ones((len(self.Y_T),len(self.Y_T)))*self.Y_T).T - (np.ones((len(self.Y_T),len(self.Y_T)))*self.Y_T))**2
         self.del2_Y_C = ((np.ones((len(self.Y_C),len(self.Y_C)))*self.Y_C).T - (np.ones((len(self.Y_C),len(self.Y_C)))*self.Y_C))**2
         
@@ -106,7 +106,7 @@ class malts:
     def fit(self,method='COBYLA'):
         np.random.seed(0)
         M_init = np.ones((self.p,))
-        res = opt.minimize( self.objective, x0=M_init,method=method )
+        res = opt.minimize( self.objective, x0=M_init, method=method )
         self.M = res.x
         self.Mc = self.M[:len(self.continuous)]
         self.Md = self.M[len(self.continuous):]

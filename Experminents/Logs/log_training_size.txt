@@ -1,0 +1,281 @@
+TRAINING SIZE EXPERIMENT
+   training set size  num important cov  ...  training objective  relative test err
+0                100                  5  ...         1850.034381           0.181378
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                100                  5  ...         1850.034381           0.181378
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                100                  5  ...         1850.034381           0.181378
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                100                  5  ...         1850.034381           0.181378
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                100                  5  ...         1850.034381           0.181378
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                100                  5  ...         1850.034381           0.181378
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                100                  5  ...         1850.034381           0.181378
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                100                  5  ...         1850.034381           0.181378
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                100                  5  ...         1850.034381           0.181378
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                100                  5  ...         1850.034381           0.181378
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                200                  5  ...         1652.199731           0.126719
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                200                  5  ...         1652.199731           0.126719
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                200                  5  ...         1652.199731           0.126719
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                200                  5  ...         1652.199731           0.126719
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                200                  5  ...         1652.199731           0.126719
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                200                  5  ...         1652.199731           0.126719
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                200                  5  ...         1652.199731           0.126719
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                200                  5  ...         1652.199731           0.126719
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                200                  5  ...         1652.199731           0.126719
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                200                  5  ...         1652.199731           0.126719
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                400                  5  ...         1661.082703           0.130327
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                400                  5  ...         1661.082703           0.130327
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                400                  5  ...         1661.082703           0.130327
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                400                  5  ...         1661.082703           0.130327
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                400                  5  ...         1661.082703           0.130327
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                400                  5  ...         1661.082703           0.130327
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                400                  5  ...         1661.082703           0.130327
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                400                  5  ...         1661.082703           0.130327
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                400                  5  ...         1661.082703           0.130327
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                400                  5  ...         1661.082703           0.130327
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                800                  5  ...         2427.021416           0.128768
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                800                  5  ...         2427.021416           0.128768
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                800                  5  ...         2427.021416           0.128768
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                800                  5  ...         2427.021416           0.128768
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                800                  5  ...         2427.021416           0.128768
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                800                  5  ...         2427.021416           0.128768
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                800                  5  ...         2427.021416           0.128768
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                800                  5  ...         2427.021416           0.128768
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                800                  5  ...         2427.021416           0.128768
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0                800                  5  ...         2427.021416           0.128768
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               1600                  5  ...         3799.871262           0.126388
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               1600                  5  ...         3799.871262           0.126388
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               1600                  5  ...         3799.871262           0.126388
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               1600                  5  ...         3799.871262           0.126388
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               1600                  5  ...         3799.871262           0.126388
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               1600                  5  ...         3799.871262           0.126388
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               1600                  5  ...         3799.871262           0.126388
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               1600                  5  ...         3799.871262           0.126388
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               1600                  5  ...         3799.871262           0.126388
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               1600                  5  ...         3799.871262           0.126388
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               3200                  5  ...         6213.387825           0.184926
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               3200                  5  ...         6213.387825           0.184926
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               3200                  5  ...         6213.387825           0.184926
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               3200                  5  ...         6213.387825           0.184926
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               3200                  5  ...         6213.387825           0.184926
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               3200                  5  ...         6213.387825           0.184926
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               3200                  5  ...         6213.387825           0.184926
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               3200                  5  ...         6213.387825           0.184926
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               3200                  5  ...         6213.387825           0.184926
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               3200                  5  ...         6213.387825           0.184926
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               6400                  5  ...        10572.314956            0.12929
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               6400                  5  ...        10572.314956            0.12929
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               6400                  5  ...        10572.314956            0.12929
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               6400                  5  ...        10572.314956            0.12929
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               6400                  5  ...        10572.314956            0.12929
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               6400                  5  ...        10572.314956            0.12929
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               6400                  5  ...        10572.314956            0.12929
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               6400                  5  ...        10572.314956            0.12929
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               6400                  5  ...        10572.314956            0.12929
+
+[1 rows x 5 columns]
+   training set size  num important cov  ...  training objective  relative test err
+0               6400                  5  ...        10572.314956            0.12929
+
+[1 rows x 5 columns]
