@@ -18,9 +18,9 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 
 numExample = 1000
-num_cov_dense = 100
-num_covs_unimportant = 400
-n_est = 3000
+num_cov_dense = 50
+num_covs_unimportant = 150
+n_est = 2500
 num_covariates = num_cov_dense+num_covs_unimportant
 
 df_train, df_true_train = dg.data_generation_dense_endo_2(numExample, num_cov_dense, num_covs_unimportant,rho=0)
@@ -38,7 +38,7 @@ m = pymalts.malts('Y','T',data=df_train, discrete=[], C=5,k=10)
 res = m.fit()
 print(res.x)
 
-mg = m.get_matched_groups(df_est,1200)
+mg = m.get_matched_groups(df_est,250)
 
 # cate_mean = m.CATE(mg,model='mean')
 cate_linear = m.CATE(mg,model='linear')
