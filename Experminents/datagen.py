@@ -69,7 +69,7 @@ def data_generation_dense_endo_2(num_samples, num_cov_dense, num_covs_unimportan
     def u(x):
         T = []
         for row in x:
-            l = ( 1 + np.tanh( ( row[-1] + row[-2] ) / 20 ) )
+            l = ( 1 + np.tanh( ( row[-1] + row[-2] - row[-3])  ) )
             t = np.random.binomial(1,l/2)
             T.append(t)
         return np.array(T)

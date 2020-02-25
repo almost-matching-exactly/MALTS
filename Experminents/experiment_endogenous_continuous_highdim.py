@@ -17,17 +17,17 @@ warnings.filterwarnings("ignore")
 
 np.random.seed(0)
 
-numExample = 2000
-num_cov_dense = 200
-num_covs_unimportant = 800
-n_est = 5000
+numExample = 1000
+num_cov_dense = 100
+num_covs_unimportant = 400
+n_est = 3000
 num_covariates = num_cov_dense+num_covs_unimportant
 
-df_train, df_true_train = dg.data_generation_dense_endo(numExample, num_cov_dense, num_covs_unimportant,rho=0)
+df_train, df_true_train = dg.data_generation_dense_endo_2(numExample, num_cov_dense, num_covs_unimportant,rho=0)
 
 X,Y,T = np.array(df_train[df_train.columns[0:num_covariates]]), np.array(df_train['Y']), np.array(df_train['T'])
 
-df_est, df_true_est = dg.data_generation_dense_endo(n_est, num_cov_dense, num_covs_unimportant,rho=0.2)
+df_est, df_true_est = dg.data_generation_dense_endo_2(n_est, num_cov_dense, num_covs_unimportant,rho=0.2)
 
 Xtest,Ytest,Ttest = np.array(df_est[df_est.columns[0:num_covariates]]), np.array(df_est['Y']), np.array(df_est['T'])
 t_true = df_true_est['TE'].to_numpy()
@@ -38,7 +38,7 @@ m = pymalts.malts('Y','T',data=df_train, discrete=[], C=5,k=10)
 res = m.fit()
 print(res.x)
 
-mg = m.get_matched_groups(df_est,180)
+mg = m.get_matched_groups(df_est,1200)
 
 # cate_mean = m.CATE(mg,model='mean')
 cate_linear = m.CATE(mg,model='linear')
@@ -64,7 +64,7 @@ err_malts_RF = [] #list(np.array(list( np.abs(t_true - cate_RF['CATE']) )))
 label_malts = [ 'MALTS (mean)' for i in range(len(err_malts_mean)) ]+[ 'MALTS (linear)' for i in range(len(err_malts_linear)) ]+[ 'MALTS (RF)' for i in range(len(err_malts_RF)) ]
 err_malts = err_malts_mean + err_malts_linear + err_malts_RF
 
-
+'''
 #----------------------------------------------------------------------------------------------
 ##DBARTS
 
@@ -220,3 +220,4 @@ ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('violin_malts_highdim.png')
 
+'''

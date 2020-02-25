@@ -8,6 +8,7 @@ Created on Fri Nov 22 19:50:50 2019
 import numpy as np
 import pandas as pd
 import pymalts
+import prognostic
 import datagen as dg
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -20,7 +21,7 @@ np.random.seed(0)
 numExample = 1000
 num_cov_dense = 10
 num_covs_unimportant = 25
-n_est = 1500
+n_est = 3000
 num_covariates = num_cov_dense+num_covs_unimportant
 
 df_train, df_true_train = dg.data_generation_dense_endo(numExample, num_cov_dense, num_covs_unimportant,rho=0)
@@ -33,6 +34,7 @@ Xtest,Ytest,Ttest = np.array(df_est[df_est.columns[0:num_covariates]]), np.array
 t_true = df_true_est['TE'].to_numpy()
 ate_true = np.mean(t_true)
 #del Xtest,Ytest,Ttest,df,dense_bs, treatment_eff_coef
+
 
 m = pymalts.malts('Y','T',data=df_train, discrete=[], C=5,k=10)
 res = m.fit()
@@ -67,6 +69,13 @@ err_malts_RF = [] #list(np.array(list( np.abs(t_true - cate_RF['CATE']) )))
 label_malts = [ 'MALTS (mean)' for i in range(len(err_malts_mean)) ]+[ 'MALTS (linear)' for i in range(len(err_malts_linear)) ]+[ 'MALTS (RF)' for i in range(len(err_malts_RF)) ]
 err_malts = err_malts_mean + err_malts_linear + err_malts_RF
 
+#----------------------------------------------------------------------------------------------
+##Prognostic
+prog = prognostic.prognostic('Y','T',df_train)
+prog_mg = prog.get_matched_group(df_est) 
+
+err_prog = list(np.array(list( np.abs(t_true - prog_mg['CATE']) ))/ate_true )
+label_prog = [ 'Prognostic Score' for i in range(len(err_prog)) ]
 
 #----------------------------------------------------------------------------------------------
 ##DBARTS
@@ -206,8 +215,8 @@ label_full = [ 'Full Matching' for i in range(len(err_full)) ]
 # #---------------------------------------------------------------------------------------------
 
 err = pd.DataFrame()
-err['Relative CATE Error (percentage)'] = np.array(err_malts + err_bart + err_crf + err_genmatch + err_psnn + err_full)*100
-err['Method'] = label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full
+err['Relative CATE Error (percentage)'] = np.array(err_malts + err_bart + err_crf + err_genmatch + err_psnn + err_full + err_prog)*100
+err['Method'] = label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog
 
 fig, ax = plt.subplots(figsize=(40,50))
 sns.boxenplot(x='Method',y='Relative CATE Error (percentage)',data=err)
@@ -222,4 +231,6 @@ plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('Figures/violin_malts.png')
+
+err.to_csv('Logs/CATE_Est_Error_File.csv')
 
