@@ -8,6 +8,7 @@ Created on Fri Nov 22 19:50:50 2019
 import numpy as np
 import pandas as pd
 import pymalts
+import prognostic
 import datagen as dg
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -64,7 +65,14 @@ err_malts_RF = [] #list(np.array(list( np.abs(t_true - cate_RF['CATE']) )))
 label_malts = [ 'MALTS (mean)' for i in range(len(err_malts_mean)) ]+[ 'MALTS (linear)' for i in range(len(err_malts_linear)) ]+[ 'MALTS (RF)' for i in range(len(err_malts_RF)) ]
 err_malts = err_malts_mean + err_malts_linear + err_malts_RF
 
-'''
+#----------------------------------------------------------------------------------------------
+##Prognostic
+prog = prognostic.prognostic('Y','T',df_train)
+prog_mg = prog.get_matched_group(df_est) 
+
+err_prog = list(np.array(list( np.abs(t_true - prog_mg['CATE']) ))/ate_true )
+label_prog = [ 'Prognostic Score' for i in range(len(err_prog)) ]
+
 #----------------------------------------------------------------------------------------------
 ##DBARTS
 
@@ -130,6 +138,7 @@ formula_cov = 'X0'
 for j in range(1,num_covariates):
     formula_cov += '+X%d'%(j)
 
+'''
 # #---------------------------------------------------------------------------------------------
 ##GenMatch
 string = """
@@ -151,9 +160,9 @@ match = genmatch.mtch
 match2 = genmatch.mtch2
 t_true_genmatch = np.hstack((match['TE'],match2['TE']))
 t_hat_genmatch = np.hstack((np.array(genmatch.hh),np.array(genmatch.hh2)))
-
-err_genmatch = list( np.abs(t_hat_genmatch - t_true_genmatch)/ate_true )
-label_genmatch = [ 'GenMatch' for i in range(len(err_genmatch)) ]
+'''
+err_genmatch = []#list( np.abs(t_hat_genmatch - t_true_genmatch)/ate_true )
+label_genmatch = []#[ 'GenMatch' for i in range(len(err_genmatch)) ]
 
 
 # #---------------------------------------------------------------------------------------------
@@ -203,8 +212,8 @@ label_full = [ 'Full Matching' for i in range(len(err_full)) ]
 # #---------------------------------------------------------------------------------------------
 
 err = pd.DataFrame()
-err['Relative CATE Error (percentage)'] = np.array(err_malts + err_bart + err_crf + err_genmatch + err_psnn + err_full)*100
-err['Method'] = label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full
+err['Relative CATE Error (percentage)'] = np.array(err_malts + err_bart + err_crf + err_genmatch + err_psnn + err_full + err_prog)*100
+err['Method'] = label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog
 
 fig, ax = plt.subplots(figsize=(40,50))
 sns.boxenplot(x='Method',y='Relative CATE Error (percentage)',data=err)
@@ -220,4 +229,3 @@ ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('violin_malts_highdim.png')
 
-'''
