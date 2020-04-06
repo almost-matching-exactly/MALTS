@@ -16,12 +16,10 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 class malts:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,gamma=1,epsilon=600,k=10):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10):
         np.random.seed(0)
         self.C = C #coefficient to regularozation term
-        self.gamma = gamma
         self.k = k
-        self.epsilon = epsilon #lambda x: (1 + np.exp( - self.epsilon) )/(1+np.exp( self.gamma * (x - self.epsilon) ) )
         self.n, self.p = data.shape
         self.p = self.p - 2#shape of the data
         self.outcome = outcome

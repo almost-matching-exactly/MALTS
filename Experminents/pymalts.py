@@ -14,33 +14,30 @@ import sklearn.ensemble as ensemble
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from sklearn.model_selection import StratifiedKFold
 
 class malts:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,gamma=1,epsilon=600,k=10):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10):
         np.random.seed(0)
         self.C = C #coefficient to regularozation term
-        self.gamma = gamma
         self.k = k
-        self.epsilon = epsilon #lambda x: (1 + np.exp( - self.epsilon) )/(1+np.exp( self.gamma * (x - self.epsilon) ) )
         self.n, self.p = data.shape
-        self.p = self.p - 2#shape of the data
+        self.p = self.p - 2 #shape of the data
         self.outcome = outcome
         self.treatment = treatment
         self.discrete = discrete
         self.continuous = list(set(data.columns).difference(set([outcome]+[treatment]+discrete)))
-#        Mc = np.ones((len(self.continuous),)) #initializing the stretch vector 
-#        Md = np.ones((len(self.discrete),)) #initializing the stretch vector 
         #splitting the data into control and treated units
         self.df_T = data.loc[data[treatment]==1]
         self.df_C = data.loc[data[treatment]==0]
         #extracting relevant covariates (discrete,continuous) 
         #and outcome. Converting to numpy array.
-        self.Xc_T = self.df_T[self.continuous].to_numpy(copy=True)
-        self.Xc_C = self.df_C[self.continuous].to_numpy(copy=True)
-        self.Xd_T = self.df_T[self.discrete].to_numpy(copy=True)
-        self.Xd_C = self.df_C[self.discrete].to_numpy(copy=True)
-        self.Y_T = self.df_T[self.outcome].to_numpy(copy=True)
-        self.Y_C = self.df_C[self.outcome].to_numpy(copy=True)
+        self.Xc_T = self.df_T[self.continuous].to_numpy()
+        self.Xc_C = self.df_C[self.continuous].to_numpy()
+        self.Xd_T = self.df_T[self.discrete].to_numpy()
+        self.Xd_C = self.df_C[self.discrete].to_numpy()
+        self.Y_T = self.df_T[self.outcome].to_numpy()
+        self.Y_C = self.df_C[self.outcome].to_numpy()
         self.del2_Y_T = ((np.ones((len(self.Y_T),len(self.Y_T)))*self.Y_T).T - (np.ones((len(self.Y_T),len(self.Y_T)))*self.Y_T))**2
         self.del2_Y_C = ((np.ones((len(self.Y_C),len(self.Y_C)))*self.Y_C).T - (np.ones((len(self.Y_C),len(self.Y_C)))*self.Y_C))**2
         
@@ -106,7 +103,7 @@ class malts:
     def fit(self,method='COBYLA'):
         np.random.seed(0)
         M_init = np.ones((self.p,))
-        res = opt.minimize( self.objective, x0=M_init, method=method )
+        res = opt.minimize( self.objective, x0=M_init,method=method )
         self.M = res.x
         self.Mc = self.M[:len(self.continuous)]
         self.Md = self.M[len(self.continuous):]
@@ -228,7 +225,22 @@ class malts:
         
             
         
-        
-        
+class malts_mf:
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10,n_splits=5):
+        skf = StratifiedKFold(n_splits=n_splits)
+        gen_skf = skf.split(data,data[treatment])
+        self.M_opt_list = []
+        self.MG_list = []
+        self.CATE_list = []
+        for est_idx, train_idx in gen_skf:
+            df_train = data.iloc[train_idx]
+            df_est = data.iloc[est_idx]
+            m = malts(outcome,treatment,data=df_train, discrete=discrete, C=C,k=k)
+            m.fit()
+            self.M_opt_list.append(m.M)
+            mg = m.get_matched_groups(df_est,50)
+            self.MG_list.append(mg)
+            self.CATE_list.append(m.CATE(mg))
+            
         
         

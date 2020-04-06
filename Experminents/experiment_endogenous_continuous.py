@@ -35,7 +35,9 @@ t_true = df_true_est['TE'].to_numpy()
 ate_true = np.mean(t_true)
 #del Xtest,Ytest,Ttest,df,dense_bs, treatment_eff_coef
 
+m = pymalts.malts_mf( 'Y', 'T',data = df_est )
 
+'''
 m = pymalts.malts('Y','T',data=df_train, discrete=[], C=5,k=10)
 res = m.fit()
 print(res.x)
@@ -233,4 +235,4 @@ plt.tight_layout()
 fig.savefig('Figures/violin_malts.png')
 
 err.to_csv('Logs/CATE_Est_Error_File.csv')
-
+'''
