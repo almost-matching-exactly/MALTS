@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore")
 
 np.random.seed(0)
 
-numExample = 1000
+numExample = 2000
 num_cov_dense = 10
 num_covs_unimportant = 25
 n_est = 3000
@@ -35,14 +35,14 @@ t_true = df_true_est['TE'].to_numpy()
 ate_true = np.mean(t_true)
 #del Xtest,Ytest,Ttest,df,dense_bs, treatment_eff_coef
 
-m = pymalts.malts_mf( 'Y', 'T',data = df_est )
+# m = pymalts.malts_mf( 'Y', 'T',data = df_est )
 
-'''
 m = pymalts.malts('Y','T',data=df_train, discrete=[], C=5,k=10)
 res = m.fit()
 print(res.x)
 
 mg = m.get_matched_groups(df_est,50)
+
 
 # cate_mean = m.CATE(mg,model='mean')
 cate_linear = m.CATE(mg,model='linear')
@@ -71,6 +71,7 @@ err_malts_RF = [] #list(np.array(list( np.abs(t_true - cate_RF['CATE']) )))
 label_malts = [ 'MALTS (mean)' for i in range(len(err_malts_mean)) ]+[ 'MALTS (linear)' for i in range(len(err_malts_linear)) ]+[ 'MALTS (RF)' for i in range(len(err_malts_RF)) ]
 err_malts = err_malts_mean + err_malts_linear + err_malts_RF
 
+'''
 #----------------------------------------------------------------------------------------------
 ##Prognostic
 prog = prognostic.prognostic('Y','T',df_train)

@@ -143,36 +143,39 @@ class malts:
         for i in range(Y.shape[0]):
             #finding k closest control units to unit i
             idx = np.argpartition(D_C[i,:],k)
-            matched_Xc_C, matched_Xd_C, matched_Y_C, d_array_C = Xc_C[idx[:k],:], Xd_C[idx[:k],:], Y_C[idx[:k]], D_C[i,idx[:k]]
+            matched_df_C = pd.DataFrame( np.hstack( (Xc_C[idx[:k],:], Xd_C[idx[:k],:].reshape((k,len(self.discrete))), Y_C[idx[:k]].reshape(-1,1), D_C[i,idx[:k]].reshape(-1,1), np.zeros((k,1)) ) ), index=['control-%d'%(j) for j in range(k)], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
             #finding k closest treated units to unit i
             idx = np.argpartition(D_T[i,:],k)
-            matched_Xc_T, matched_Xd_T, matched_Y_T, d_array_T = Xc_T[idx[:k],:], Xd_T[idx[:k],:], Y_T[idx[:k]],D_T[i,idx[:k]]
-            MG[i] = {'unit':[ Xc[i], Xd[i], Y[i], T[i] ] ,'control':[ matched_Xc_C, matched_Xd_C, matched_Y_C, d_array_C],'treated':[matched_Xc_T, matched_Xd_T, matched_Y_T, d_array_T ]}
+            matched_df_T = pd.DataFrame( np.hstack( (Xc_T[idx[:k],:], Xd_T[idx[:k],:].reshape((k,len(self.discrete))), Y_T[idx[:k]].reshape(-1,1), D_T[i,idx[:k]].reshape(-1,1), np.ones((k,1)) ) ), index=['treated-%d'%(j) for j in range(k)], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
+            matched_df = pd.DataFrame(np.hstack((Xc[i], Xd[i], Y[i], 0, T[i])).reshape(1,-1), index=['query'], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment])
+            matched_df = matched_df.append(matched_df_T.append(matched_df_C))
+            MG[i] = matched_df
+            #{'unit':[ Xc[i], Xd[i], Y[i], T[i] ] ,'control':[ matched_Xc_C, matched_Xd_C, matched_Y_C, d_array_C],'treated':[matched_Xc_T, matched_Xd_T, matched_Y_T, d_array_T ]}
         return MG
     
     def CATE(self,MG,outcome_discrete=False,model='linear'):
         cate = {}
         for k,v in MG.items():
             #control
-            matched_X_C = np.hstack((v['control'][0],v['control'][1]))
-            matched_Y_C = v['control'][2]
+            matched_X_C = v.loc[v[self.treatment]==0].drop(index='query',errors='ignore')[self.continuous+self.discrete]
+            matched_Y_C = v.loc[v[self.treatment]==0].drop(index='query',errors='ignore')[self.outcome]
             #treated
-            matched_X_T = np.hstack((v['treated'][0], v['treated'][1]))
-            matched_Y_T = v['treated'][2]
-            x = np.hstack(([v['unit'][0]], [v['unit'][1]]))
+            matched_X_T = v.loc[v[self.treatment]==1].drop(index='query',errors='ignore')[self.continuous+self.discrete]
+            matched_Y_T = v.loc[v[self.treatment]==1].drop(index='query',errors='ignore')[self.outcome]
+            x = v.loc['query'][self.continuous+self.discrete].to_numpy().reshape(1,-1)
             if not outcome_discrete:
                 if model=='mean':
                     yt = np.mean(matched_Y_T)
                     yc = np.mean(matched_Y_C)
-                    cate[k] = {'CATE': yt - yc,'outcome':v['unit'][2],'treatment':v['unit'][3] }
+                    cate[k] = {'CATE': yt - yc,'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment] }
                 if model=='linear':
                     yc = lm.Ridge().fit( X = matched_X_C, y = matched_Y_C )
                     yt = lm.Ridge().fit( X = matched_X_T, y = matched_Y_T )
-                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0],'outcome':v['unit'][2],'treatment':v['unit'][3] }
+                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment] }
                 if model=='RF':
                     yc = ensemble.RandomForestRegressor().fit( X = matched_X_C, y = matched_Y_C )
                     yt = ensemble.RandomForestRegressor().fit( X = matched_X_T, y = matched_Y_T )
-                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0],'outcome':v['unit'][2],'treatment':v['unit'][3] }
+                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment] }
         return pd.DataFrame.from_dict(cate,orient='index')
     
     def visualizeMG(self,MG,a):
@@ -180,7 +183,7 @@ class malts:
         k = len(MGi['control'][2])
         Xc = np.vstack( (MGi['control'][0],MGi['treated'][0]) )
         Xd = np.vstack( (MGi['control'][1],MGi['treated'][1]) )
-        df = pd.DataFrame(np.hstack( (Xc,Xd) ),columns=(self.continuous+self.discrete))
+        df = MGi[self.continuous+self.discrete]
         
         df.index.names = ['Unit']
         df.columns.names = ['Covariate']
