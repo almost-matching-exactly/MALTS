@@ -140,6 +140,7 @@ class malts:
         Dd_C = np.sum( (Dd_C * (self.Md.reshape(-1,1)) )**2 , axis=1 )
         D_C = (Dc_C + Dd_C).T
         MG = {}
+        index = df_estimation.index
         for i in range(Y.shape[0]):
             #finding k closest control units to unit i
             idx = np.argpartition(D_C[i,:],k)
@@ -149,7 +150,7 @@ class malts:
             matched_df_T = pd.DataFrame( np.hstack( (Xc_T[idx[:k],:], Xd_T[idx[:k],:].reshape((k,len(self.discrete))), Y_T[idx[:k]].reshape(-1,1), D_T[i,idx[:k]].reshape(-1,1), np.ones((k,1)) ) ), index=['treated-%d'%(j) for j in range(k)], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
             matched_df = pd.DataFrame(np.hstack((Xc[i], Xd[i], Y[i], 0, T[i])).reshape(1,-1), index=['query'], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment])
             matched_df = matched_df.append(matched_df_T.append(matched_df_C))
-            MG[i] = matched_df
+            MG[index[i]] = matched_df
             #{'unit':[ Xc[i], Xd[i], Y[i], T[i] ] ,'control':[ matched_Xc_C, matched_Xd_C, matched_Y_C, d_array_C],'treated':[matched_Xc_T, matched_Xd_T, matched_Y_T, d_array_T ]}
         return MG
     
@@ -180,13 +181,12 @@ class malts:
     
     def visualizeMG(self,MG,a):
         MGi = MG[a]
-        k = (MGi.shape[0] - 1 )/2
-        df = MGi[self.continuous+self.discrete]
+        k = int( (MGi.shape[0] - 1 )/2 )
+        df = MGi[self.continuous+self.discrete+[self.treatment]]
         
         df.index.names = ['Unit']
         df.columns.names = ['Covariate']
-        tidy = df.stack().to_frame().reset_index().rename(columns={0: 'Covariate Value'})
-        df[self.treatment] = np.array([0 for i in range(0,k)] + [1 for i in range(0,k)])
+        tidy = df.stack().to_frame().reset_index().rename(columns={0: 'Covariate Value'})  
         
         T = np.array([0 for i in range(0,k*self.p)] + [1 for i in range(0,k*self.p)])
         tidy[self.treatment] = T
@@ -228,20 +228,27 @@ class malts:
         
 class malts_mf:
     def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10,n_splits=5):
+        self.n_splits = n_splits
+        self.C = C
+        self.k = k
+        self.outcome = outcome
+        self.treatment = treatment
+        self.discrete = discrete
         skf = StratifiedKFold(n_splits=n_splits)
         gen_skf = skf.split(data,data[treatment])
         self.M_opt_list = []
         self.MG_list = []
-        self.CATE_list = []
+        self.CATE_df = pd.DataFrame()
+        i = 0
         for est_idx, train_idx in gen_skf:
             df_train = data.iloc[train_idx]
             df_est = data.iloc[est_idx]
-            m = malts(outcome,treatment,data=df_train, discrete=discrete, C=C,k=k)
+            m = malts( outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k )
             m.fit()
             self.M_opt_list.append(m.M)
             mg = m.get_matched_groups(df_est,50)
             self.MG_list.append(mg)
-            self.CATE_list.append(m.CATE(mg))
-            
+            m.CATE(mg).rename(columns={'CATE':'CATE-%d'%(i),'outcome':'outcome-%d'%(i),'treatment':'treatment-%d'%(i)})
+            self.CATE_df = pd.concat([self.CATE_df, m.CATE(mg)], join='outer', axis=1)
         
         
