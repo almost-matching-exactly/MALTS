@@ -58,6 +58,20 @@ cate_linear = m.CATE(mg,model='linear')
 # cate_RF = m.CATE(mg,model='RF')
 '''
 
+fig, ax = plt.subplots()
+sns.scatterplot(x='true.CATE',y='avg.CATE',size='std.CATE',hue='treatment',alpha=0.2,sizes=(10,200),data=cate_df)
+lims = [
+    np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
+    np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+]
+
+ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
+ax.set_aspect('equal')
+ax.set_xlim(lims)
+ax.set_ylim(lims)
+plt.xlabel('True CATE')
+plt.ylabel('Estimated CATE')
+fig.savefig('Figures/trueVSestimatedCATE_malts_multifold.png')
 
 err_malts_mf = list(np.array(list( np.abs(t_true - cate_df['avg.CATE']) ))/ate_true )
 

@@ -15,13 +15,13 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 import warnings
 warnings.filterwarnings("ignore")
- 
+
 np.random.seed(0)
 
-numExample = 2000
+numExample = 1000
 num_cov_dense = 10
 num_covs_unimportant = 25
-n_est = 2500
+n_est = 3000
 num_covariates = num_cov_dense+num_covs_unimportant
 
 df_train, df_true_train = dg.data_generation_dense_endo(numExample, num_cov_dense, num_covs_unimportant,rho=0)
@@ -35,29 +35,32 @@ t_true = df_true_est['TE'].to_numpy()
 ate_true = np.mean(t_true)
 #del Xtest,Ytest,Ttest,df,dense_bs, treatment_eff_coef
 
-'''
-m = pymalts.malts_mf( 'Y', 'T', data = df_est, n_splits=5 )
-cate_df = m.CATE_df['CATE']
-cate_df['avg.CATE'] = cate_df.mean(axis=1)
-cate_df['std.CATE'] = cate_df.std(axis=1)
-cate_df['outcome'] = m.CATE_df['outcome'].mean(axis=1)
-cate_df['treatment'] = m.CATE_df['treatment'].mean(axis=1)
-cate_df['true.CATE'] = t_true
-cate_df['err.CATE'] = np.abs(cate_df['avg.CATE']-cate_df['true.CATE'])
-# sns.regplot(x='std.CATE',y='err.CATE',data=cate_df)
-# sns.scatterplot(x='true.CATE',y='avg.CATE',size='std.CATE',data=cate_df)
-'''
+
 m = pymalts.malts('Y','T',data=df_train, discrete=[], C=5,k=10)
 res = m.fit()
 print(res.x)
 
 mg = m.get_matched_groups(df_est,50)
 
-
 # cate_mean = m.CATE(mg,model='mean')
 cate_linear = m.CATE(mg,model='linear')
 # cate_RF = m.CATE(mg,model='RF')
 
+fig, ax = plt.subplots()
+plt.scatter(t_true,cate_linear['CATE'],alpha=0.2,c=cate_linear['treatment'])
+plt.colorbar(ticks=[0,1])
+lims = [
+    np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
+    np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+]
+
+ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
+ax.set_aspect('equal')
+ax.set_xlim(lims)
+ax.set_ylim(lims)
+plt.xlabel('True CATE')
+plt.ylabel('Estimated CATE')
+fig.savefig('Figures/trueVSestimatedCATE_malts_linear.png')
 
 err_malts_mean = [] #list( np.array(list( np.abs(t_true - cate_mean['CATE']) )) )
 err_malts_linear = list(np.array(list( np.abs(t_true - cate_linear['CATE']) ))/ate_true )
@@ -65,7 +68,6 @@ err_malts_RF = [] #list(np.array(list( np.abs(t_true - cate_RF['CATE']) )))
 
 label_malts = [ 'MALTS (mean)' for i in range(len(err_malts_mean)) ]+[ 'MALTS (linear)' for i in range(len(err_malts_linear)) ]+[ 'MALTS (RF)' for i in range(len(err_malts_RF)) ]
 err_malts = err_malts_mean + err_malts_linear + err_malts_RF
-
 
 #----------------------------------------------------------------------------------------------
 ##Prognostic
@@ -231,4 +233,3 @@ plt.tight_layout()
 fig.savefig('Figures/violin_malts.png')
 
 err.to_csv('Logs/CATE_Est_Error_File.csv')
-
