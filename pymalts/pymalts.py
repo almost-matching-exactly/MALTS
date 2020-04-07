@@ -14,21 +14,19 @@ import sklearn.ensemble as ensemble
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from sklearn.model_selection import StratifiedKFold
 
 class malts:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,gamma=1,epsilon=600,k=10):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10):
+        np.random.seed(0)
         self.C = C #coefficient to regularozation term
-        self.gamma = gamma
         self.k = k
-        self.epsilon = epsilon #lambda x: (1 + np.exp( - self.epsilon) )/(1+np.exp( self.gamma * (x - self.epsilon) ) )
         self.n, self.p = data.shape
-        self.p = self.p - 2#shape of the data
+        self.p = self.p - 2 #shape of the data
         self.outcome = outcome
         self.treatment = treatment
         self.discrete = discrete
         self.continuous = list(set(data.columns).difference(set([outcome]+[treatment]+discrete)))
-#        Mc = np.ones((len(self.continuous),)) #initializing the stretch vector 
-#        Md = np.ones((len(self.discrete),)) #initializing the stretch vector 
         #splitting the data into control and treated units
         self.df_T = data.loc[data[treatment]==1]
         self.df_C = data.loc[data[treatment]==0]
@@ -103,6 +101,7 @@ class malts:
         return delta + reg + cons1 + cons2
         
     def fit(self,method='COBYLA'):
+        np.random.seed(0)
         M_init = np.ones((self.p,))
         res = opt.minimize( self.objective, x0=M_init,method=method )
         self.M = res.x
@@ -141,52 +140,53 @@ class malts:
         Dd_C = np.sum( (Dd_C * (self.Md.reshape(-1,1)) )**2 , axis=1 )
         D_C = (Dc_C + Dd_C).T
         MG = {}
+        index = df_estimation.index
         for i in range(Y.shape[0]):
             #finding k closest control units to unit i
             idx = np.argpartition(D_C[i,:],k)
-            matched_Xc_C, matched_Xd_C, matched_Y_C, d_array_C = Xc_C[idx[:k],:], Xd_C[idx[:k],:], Y_C[idx[:k]], D_C[i,idx[:k]]
+            matched_df_C = pd.DataFrame( np.hstack( (Xc_C[idx[:k],:], Xd_C[idx[:k],:].reshape((k,len(self.discrete))), Y_C[idx[:k]].reshape(-1,1), D_C[i,idx[:k]].reshape(-1,1), np.zeros((k,1)) ) ), index=['control-%d'%(j) for j in range(k)], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
             #finding k closest treated units to unit i
             idx = np.argpartition(D_T[i,:],k)
-            matched_Xc_T, matched_Xd_T, matched_Y_T, d_array_T = Xc_T[idx[:k],:], Xd_T[idx[:k],:], Y_T[idx[:k]],D_T[i,idx[:k]]
-            MG[i] = {'unit':[ Xc[i], Xd[i], Y[i], T[i] ] ,'control':[ matched_Xc_C, matched_Xd_C, matched_Y_C, d_array_C],'treated':[matched_Xc_T, matched_Xd_T, matched_Y_T, d_array_T ]}
+            matched_df_T = pd.DataFrame( np.hstack( (Xc_T[idx[:k],:], Xd_T[idx[:k],:].reshape((k,len(self.discrete))), Y_T[idx[:k]].reshape(-1,1), D_T[i,idx[:k]].reshape(-1,1), np.ones((k,1)) ) ), index=['treated-%d'%(j) for j in range(k)], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
+            matched_df = pd.DataFrame(np.hstack((Xc[i], Xd[i], Y[i], 0, T[i])).reshape(1,-1), index=['query'], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment])
+            matched_df = matched_df.append(matched_df_T.append(matched_df_C))
+            MG[index[i]] = matched_df
+            #{'unit':[ Xc[i], Xd[i], Y[i], T[i] ] ,'control':[ matched_Xc_C, matched_Xd_C, matched_Y_C, d_array_C],'treated':[matched_Xc_T, matched_Xd_T, matched_Y_T, d_array_T ]}
         return MG
     
     def CATE(self,MG,outcome_discrete=False,model='linear'):
         cate = {}
         for k,v in MG.items():
             #control
-            matched_X_C = np.hstack((v['control'][0],v['control'][1]))
-            matched_Y_C = v['control'][2]
+            matched_X_C = v.loc[v[self.treatment]==0].drop(index='query',errors='ignore')[self.continuous+self.discrete]
+            matched_Y_C = v.loc[v[self.treatment]==0].drop(index='query',errors='ignore')[self.outcome]
             #treated
-            matched_X_T = np.hstack((v['treated'][0], v['treated'][1]))
-            matched_Y_T = v['treated'][2]
-            x = np.hstack(([v['unit'][0]], [v['unit'][1]]))
+            matched_X_T = v.loc[v[self.treatment]==1].drop(index='query',errors='ignore')[self.continuous+self.discrete]
+            matched_Y_T = v.loc[v[self.treatment]==1].drop(index='query',errors='ignore')[self.outcome]
+            x = v.loc['query'][self.continuous+self.discrete].to_numpy().reshape(1,-1)
             if not outcome_discrete:
                 if model=='mean':
                     yt = np.mean(matched_Y_T)
                     yc = np.mean(matched_Y_C)
-                    cate[k] = {'CATE': yt - yc,'outcome':v['unit'][2],'treatment':v['unit'][3] }
+                    cate[k] = {'CATE': yt - yc,'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment] }
                 if model=='linear':
                     yc = lm.Ridge().fit( X = matched_X_C, y = matched_Y_C )
                     yt = lm.Ridge().fit( X = matched_X_T, y = matched_Y_T )
-                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0],'outcome':v['unit'][2],'treatment':v['unit'][3] }
+                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment] }
                 if model=='RF':
                     yc = ensemble.RandomForestRegressor().fit( X = matched_X_C, y = matched_Y_C )
                     yt = ensemble.RandomForestRegressor().fit( X = matched_X_T, y = matched_Y_T )
-                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0],'outcome':v['unit'][2],'treatment':v['unit'][3] }
+                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment] }
         return pd.DataFrame.from_dict(cate,orient='index')
     
     def visualizeMG(self,MG,a):
         MGi = MG[a]
-        k = len(MGi['control'][2])
-        Xc = np.vstack( (MGi['control'][0],MGi['treated'][0]) )
-        Xd = np.vstack( (MGi['control'][1],MGi['treated'][1]) )
-        df = pd.DataFrame(np.hstack( (Xc,Xd) ),columns=(self.continuous+self.discrete))
+        k = int( (MGi.shape[0] - 1 )/2 )
+        df = MGi[self.continuous+self.discrete+[self.treatment]]
         
         df.index.names = ['Unit']
         df.columns.names = ['Covariate']
-        tidy = df.stack().to_frame().reset_index().rename(columns={0: 'Covariate Value'})
-        df[self.treatment] = np.array([0 for i in range(0,k)] + [1 for i in range(0,k)])
+        tidy = df.stack().to_frame().reset_index().rename(columns={0: 'Covariate Value'})  
         
         T = np.array([0 for i in range(0,k*self.p)] + [1 for i in range(0,k*self.p)])
         tidy[self.treatment] = T
@@ -223,3 +223,32 @@ class malts:
         plt.scatter(X[:,0],X[:,1])
         fig.savefig('marginal_%d_%d_matched_groups.png')
         return X
+        
+            
+        
+class malts_mf:
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10,n_splits=5):
+        self.n_splits = n_splits
+        self.C = C
+        self.k = k
+        self.outcome = outcome
+        self.treatment = treatment
+        self.discrete = discrete
+        skf = StratifiedKFold(n_splits=n_splits)
+        gen_skf = skf.split(data,data[treatment])
+        self.M_opt_list = []
+        self.MG_list = []
+        self.CATE_df = pd.DataFrame()
+        i = 0
+        for est_idx, train_idx in gen_skf:
+            df_train = data.iloc[train_idx]
+            df_est = data.iloc[est_idx]
+            m = malts( outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k )
+            m.fit()
+            self.M_opt_list.append(m.M)
+            mg = m.get_matched_groups(df_est,50)
+            self.MG_list.append(mg)
+            m.CATE(mg).rename(columns={'CATE':'CATE-%d'%(i),'outcome':'outcome-%d'%(i),'treatment':'treatment-%d'%(i)})
+            self.CATE_df = pd.concat([self.CATE_df, m.CATE(mg)], join='outer', axis=1)
+        
+        
