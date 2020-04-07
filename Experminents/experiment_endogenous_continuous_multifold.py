@@ -21,7 +21,7 @@ np.random.seed(0)
 numExample = 2000
 num_cov_dense = 10
 num_covs_unimportant = 25
-n_est = 2500
+n_est = 4000
 num_covariates = num_cov_dense+num_covs_unimportant
 
 df_train, df_true_train = dg.data_generation_dense_endo(numExample, num_cov_dense, num_covs_unimportant,rho=0)
@@ -35,7 +35,6 @@ t_true = df_true_est['TE'].to_numpy()
 ate_true = np.mean(t_true)
 #del Xtest,Ytest,Ttest,df,dense_bs, treatment_eff_coef
 
-'''
 m = pymalts.malts_mf( 'Y', 'T', data = df_est, n_splits=5 )
 cate_df = m.CATE_df['CATE']
 cate_df['avg.CATE'] = cate_df.mean(axis=1)
@@ -57,14 +56,14 @@ mg = m.get_matched_groups(df_est,50)
 # cate_mean = m.CATE(mg,model='mean')
 cate_linear = m.CATE(mg,model='linear')
 # cate_RF = m.CATE(mg,model='RF')
+'''
 
 
-err_malts_mean = [] #list( np.array(list( np.abs(t_true - cate_mean['CATE']) )) )
-err_malts_linear = list(np.array(list( np.abs(t_true - cate_linear['CATE']) ))/ate_true )
-err_malts_RF = [] #list(np.array(list( np.abs(t_true - cate_RF['CATE']) )))
+err_malts_mf = list(np.array(list( np.abs(t_true - cate_df['avg.CATE']) ))/ate_true )
 
-label_malts = [ 'MALTS (mean)' for i in range(len(err_malts_mean)) ]+[ 'MALTS (linear)' for i in range(len(err_malts_linear)) ]+[ 'MALTS (RF)' for i in range(len(err_malts_RF)) ]
-err_malts = err_malts_mean + err_malts_linear + err_malts_RF
+
+label_malts = [ 'MALTS (Multifold)' for i in range(len(err_malts_mf)) ]
+err_malts = err_malts_mf
 
 
 #----------------------------------------------------------------------------------------------
@@ -230,5 +229,5 @@ ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('Figures/violin_malts.png')
 
-err.to_csv('Logs/CATE_Est_Error_File.csv')
+err.to_csv('Logs/CATE_Multifold_Est_Error_File.csv')
 
