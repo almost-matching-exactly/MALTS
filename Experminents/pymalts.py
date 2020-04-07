@@ -222,8 +222,7 @@ class malts:
         X = np.array(X)
         plt.scatter(X[:,0],X[:,1])
         fig.savefig('marginal_%d_%d_matched_groups.png')
-        return X
-        
+        return X      
             
         
 class malts_mf:

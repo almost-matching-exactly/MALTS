@@ -21,7 +21,7 @@ np.random.seed(0)
 numExample = 2000
 num_cov_dense = 10
 num_covs_unimportant = 25
-n_est = 4000
+n_est = 2000
 num_covariates = num_cov_dense+num_covs_unimportant
 
 df_train, df_true_train = dg.data_generation_dense_endo(numExample, num_cov_dense, num_covs_unimportant,rho=0)
@@ -30,22 +30,28 @@ X,Y,T = np.array(df_train[df_train.columns[0:num_covariates]]), np.array(df_trai
 
 df_est, df_true_est = dg.data_generation_dense_endo(n_est, num_cov_dense, num_covs_unimportant,rho=0.2)
 
+df_data = df_train.append(df_est)
+df_data_true = df_true_train.append(df_true_est)
+
 Xtest,Ytest,Ttest = np.array(df_est[df_est.columns[0:num_covariates]]), np.array(df_est['Y']), np.array(df_est['T'])
 t_true = df_true_est['TE'].to_numpy()
 ate_true = np.mean(t_true)
 #del Xtest,Ytest,Ttest,df,dense_bs, treatment_eff_coef
 
-m = pymalts.malts_mf( 'Y', 'T', data = df_est, n_splits=5 )
+err_malts, err_bart, err_crf, err_genmatch, err_psnn, err_full, err_prog = [], [], [], [], [], [], []
+label_malts, label_bart, label_crf, label_genmatch, label_psnn, label_full, label_prog = [], [], [], [], [], [], []
+
+m = pymalts.malts_mf( 'Y', 'T', data = df_data, n_splits=5 )
 cate_df = m.CATE_df['CATE']
 cate_df['avg.CATE'] = cate_df.mean(axis=1)
 cate_df['std.CATE'] = cate_df.std(axis=1)
 cate_df['outcome'] = m.CATE_df['outcome'].mean(axis=1)
 cate_df['treatment'] = m.CATE_df['treatment'].mean(axis=1)
-cate_df['true.CATE'] = t_true
+cate_df['true.CATE'] = df_data_true['TE'].to_numpy()
 cate_df['err.CATE'] = np.abs(cate_df['avg.CATE']-cate_df['true.CATE'])
 # sns.regplot(x='std.CATE',y='err.CATE',data=cate_df)
 # sns.scatterplot(x='true.CATE',y='avg.CATE',size='std.CATE',data=cate_df)
-'''
+
 m = pymalts.malts('Y','T',data=df_train, discrete=[], C=5,k=10)
 res = m.fit()
 print(res.x)
@@ -56,7 +62,7 @@ mg = m.get_matched_groups(df_est,50)
 # cate_mean = m.CATE(mg,model='mean')
 cate_linear = m.CATE(mg,model='linear')
 # cate_RF = m.CATE(mg,model='RF')
-'''
+
 
 fig, ax = plt.subplots()
 sns.scatterplot(x='true.CATE',y='avg.CATE',size='std.CATE',hue='treatment',alpha=0.2,sizes=(10,200),data=cate_df)
@@ -74,12 +80,17 @@ plt.ylabel('Estimated CATE')
 fig.savefig('Figures/trueVSestimatedCATE_malts_multifold.png')
 
 err_malts_mf = list(np.array(list( np.abs(t_true - cate_df['avg.CATE']) ))/ate_true )
+err_malts_mean = [] #list( np.array(list( np.abs(t_true - cate_mean['CATE']) )) )
+err_malts_linear = list(np.array(list( np.abs(t_true - cate_linear['CATE']) ))/ate_true )
+err_malts_RF = [] #list(np.array(list( np.abs(t_true - cate_RF['CATE']) )))
 
+label_malts = [ 'MALTS (mean)' for i in range(len(err_malts_mean)) ]+[ 'MALTS (linear)' for i in range(len(err_malts_linear)) ]+[ 'MALTS (RF)' for i in range(len(err_malts_RF)) ]
+err_malts = err_malts_mean + err_malts_linear + err_malts_RF
 
 label_malts = [ 'MALTS (Multifold)' for i in range(len(err_malts_mf)) ]
-err_malts = err_malts_mf
+err_malts += err_malts_mf
 
-
+'''
 #----------------------------------------------------------------------------------------------
 ##Prognostic
 prog = prognostic.prognostic('Y','T',df_train)
@@ -224,7 +235,7 @@ label_full = [ 'Full Matching' for i in range(len(err_full)) ]
 
 
 # #---------------------------------------------------------------------------------------------
-
+'''
 err = pd.DataFrame()
 err['Relative CATE Error (percentage)'] = np.array(err_malts + err_bart + err_crf + err_genmatch + err_psnn + err_full + err_prog)*100
 err['Method'] = label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog
@@ -234,14 +245,13 @@ sns.boxenplot(x='Method',y='Relative CATE Error (percentage)',data=err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
-fig.savefig('Figures/boxplot_malts.png')
+fig.savefig('Figures/boxplot_multifold_malts.png')
  
 fig, ax = plt.subplots(figsize=(40,50))
 sns.violinplot(x='Method',y='Relative CATE Error (percentage)',data=err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
-fig.savefig('Figures/violin_malts.png')
+fig.savefig('Figures/violin_multifold_malts.png')
 
 err.to_csv('Logs/CATE_Multifold_Est_Error_File.csv')
-
