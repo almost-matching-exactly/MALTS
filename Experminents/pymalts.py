@@ -180,9 +180,7 @@ class malts:
     
     def visualizeMG(self,MG,a):
         MGi = MG[a]
-        k = len(MGi['control'][2])
-        Xc = np.vstack( (MGi['control'][0],MGi['treated'][0]) )
-        Xd = np.vstack( (MGi['control'][1],MGi['treated'][1]) )
+        k = (MGi.shape[0] - 1 )/2
         df = MGi[self.continuous+self.discrete]
         
         df.index.names = ['Unit']
