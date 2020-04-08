@@ -41,6 +41,7 @@ ate_true = np.mean(t_true)
 err_malts, err_bart, err_crf, err_genmatch, err_psnn, err_full, err_prog = [], [], [], [], [], [], []
 label_malts, label_bart, label_crf, label_genmatch, label_psnn, label_full, label_prog = [], [], [], [], [], [], []
 
+
 m = pymalts.malts_mf( 'Y', 'T', data = df_data, n_splits=5, C=5, k=10 )
 cate_df = m.CATE_df['CATE']
 cate_df['avg.CATE'] = cate_df.mean(axis=1)
@@ -90,7 +91,7 @@ err_malts = err_malts_mean + err_malts_linear + err_malts_RF
 label_malts = [ 'MALTS (Multifold)' for i in range(len(err_malts_mf)) ]
 err_malts += err_malts_mf
 
-'''
+
 #----------------------------------------------------------------------------------------------
 ##Prognostic
 prog = prognostic.prognostic('Y','T',df_train)
@@ -235,7 +236,7 @@ label_full = [ 'Full Matching' for i in range(len(err_full)) ]
 
 
 # #---------------------------------------------------------------------------------------------
-'''
+
 err = pd.DataFrame()
 err['Relative CATE Error (percentage)'] = np.array(err_malts + err_bart + err_crf + err_genmatch + err_psnn + err_full + err_prog)*100
 err['Method'] = label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog

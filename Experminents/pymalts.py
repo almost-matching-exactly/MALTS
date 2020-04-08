@@ -144,19 +144,21 @@ class malts:
         for i in range(Y.shape[0]):
             #finding k closest control units to unit i
             idx = np.argpartition(D_C[i,:],k)
-            matched_df_C = pd.DataFrame( np.hstack( (Xc_C[idx[:k],:], Xd_C[idx[:k],:].reshape((k,len(self.discrete))), Y_C[idx[:k]].reshape(-1,1), D_C[i,idx[:k]].reshape(-1,1), np.zeros((k,1)) ) ), index=['control-%d'%(j) for j in range(k)], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
+            matched_df_C = pd.DataFrame( np.hstack( (Xc_C[idx[:k],:], Xd_C[idx[:k],:].reshape((k,len(self.discrete))), Y_C[idx[:k]].reshape(-1,1), D_C[i,idx[:k]].reshape(-1,1), np.zeros((k,1)) ) ), index=df_C.index[idx[:k]], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
             #finding k closest treated units to unit i
             idx = np.argpartition(D_T[i,:],k)
-            matched_df_T = pd.DataFrame( np.hstack( (Xc_T[idx[:k],:], Xd_T[idx[:k],:].reshape((k,len(self.discrete))), Y_T[idx[:k]].reshape(-1,1), D_T[i,idx[:k]].reshape(-1,1), np.ones((k,1)) ) ), index=['treated-%d'%(j) for j in range(k)], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
+            matched_df_T = pd.DataFrame( np.hstack( (Xc_T[idx[:k],:], Xd_T[idx[:k],:].reshape((k,len(self.discrete))), Y_T[idx[:k]].reshape(-1,1), D_T[i,idx[:k]].reshape(-1,1), np.ones((k,1)) ) ), index=df_T.index[idx[:k]], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
             matched_df = pd.DataFrame(np.hstack((Xc[i], Xd[i], Y[i], 0, T[i])).reshape(1,-1), index=['query'], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment])
             matched_df = matched_df.append(matched_df_T.append(matched_df_C))
             MG[index[i]] = matched_df
             #{'unit':[ Xc[i], Xd[i], Y[i], T[i] ] ,'control':[ matched_Xc_C, matched_Xd_C, matched_Y_C, d_array_C],'treated':[matched_Xc_T, matched_Xd_T, matched_Y_T, d_array_T ]}
-        return MG
+        MG_df = pd.concat(MG)
+        return MG_df
     
     def CATE(self,MG,outcome_discrete=False,model='linear'):
         cate = {}
-        for k,v in MG.items():
+        for k in pd.unique(MG.index.get_level_values(0)):
+            v = MG.loc[k]
             #control
             matched_X_C = v.loc[v[self.treatment]==0].drop(index='query',errors='ignore')[self.continuous+self.discrete]
             matched_Y_C = v.loc[v[self.treatment]==0].drop(index='query',errors='ignore')[self.outcome]
@@ -180,9 +182,9 @@ class malts:
         return pd.DataFrame.from_dict(cate,orient='index')
     
     def visualizeMG(self,MG,a):
-        MGi = MG[a]
+        MGi = MG.loc[a]
         k = int( (MGi.shape[0] - 1 )/2 )
-        df = MGi[self.continuous+self.discrete+[self.treatment]]
+        df = MGi[self.continuous+self.discrete].drop(index='query')
         
         df.index.names = ['Unit']
         df.columns.names = ['Covariate']
@@ -191,13 +193,13 @@ class malts:
         T = np.array([0 for i in range(0,k*self.p)] + [1 for i in range(0,k*self.p)])
         tidy[self.treatment] = T
         
-        y0 = np.ones((self.p,k)) * MGi['control'][2]
+        y0 = np.ones((self.p,k)) * MGi.loc[MGi[self.treatment]==0][self.outcome].drop(index='query',errors='ignore').to_numpy()
         y0 = y0.flatten('F')
-        y1 = np.ones((self.p,k)) * MGi['treated'][2]
+        y1 = np.ones((self.p,k)) * MGi.loc[MGi[self.treatment]==1][self.outcome].drop(index='query',errors='ignore').to_numpy()
         y1 = y0.flatten('F')
         tidy[self.outcome] = np.hstack( (y0,y1) )
         fig = plt.figure()
-        sns.lmplot(sharey=False,sharex=False,x='Covariate Value',y='outcome',hue='treated',col='Covariate', data=tidy, col_wrap=3, height=4)
+        sns.lmplot(sharey=False,sharex=False,x='Covariate Value',y=self.outcome,hue=self.treatment, col='Covariate', data=tidy, col_wrap=3, height=4)
         fig.savefig('matched_group_%d.png'%(a))
         
         fig = plt.figure(figsize=(15,20))
