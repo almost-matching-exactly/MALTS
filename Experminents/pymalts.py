@@ -240,6 +240,8 @@ class malts_mf:
         self.M_opt_list = []
         self.MG_list = []
         self.CATE_df = pd.DataFrame()
+        N = np.zeros((data.shape[0],data.shape[0]))
+        self.MG_matrix = pd.DataFrame(N, columns=data.index, index=data.index)
         i = 0
         for est_idx, train_idx in gen_skf:
             df_train = data.iloc[train_idx]
@@ -251,5 +253,9 @@ class malts_mf:
             self.MG_list.append(mg)
             m.CATE(mg).rename(columns={'CATE':'CATE-%d'%(i),'outcome':'outcome-%d'%(i),'treatment':'treatment-%d'%(i)})
             self.CATE_df = pd.concat([self.CATE_df, m.CATE(mg)], join='outer', axis=1)
-        
+        for i in range(n_splits):
+            mg_i = self.MG_list[i]
+            for a in mg_i.index:
+                if a[1]!='query':
+                    self.MG_matrix.loc[a[0],a[1]] = self.MG_matrix.loc[a[0],a[1]]+1
         

@@ -18,10 +18,10 @@ warnings.filterwarnings("ignore")
  
 np.random.seed(0)
 
-numExample = 1000
+numExample = 500
 num_cov_dense = 10
 num_covs_unimportant = 25
-n_est = 2500
+n_est = 1500
 num_covariates = num_cov_dense+num_covs_unimportant
 
 df_train, df_true_train = dg.data_generation_dense_endo(numExample, num_cov_dense, num_covs_unimportant,rho=0)
@@ -53,6 +53,7 @@ cate_df['err.CATE'] = np.abs(cate_df['avg.CATE']-cate_df['true.CATE'])
 # sns.regplot(x='std.CATE',y='err.CATE',data=cate_df)
 # sns.scatterplot(x='true.CATE',y='avg.CATE',size='std.CATE',data=cate_df)
 
+'''
 m = pymalts.malts('Y','T',data=df_train, discrete=[], C=5,k=10)
 res = m.fit()
 print(res.x)
@@ -256,3 +257,4 @@ plt.tight_layout()
 fig.savefig('Figures/violin_multifold_malts.png')
 
 err.to_csv('Logs/CATE_Multifold_Est_Error_File.csv')
+'''
