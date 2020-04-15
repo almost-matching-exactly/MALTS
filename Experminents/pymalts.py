@@ -15,6 +15,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from sklearn.model_selection import StratifiedKFold
+import warnings
+warnings.filterwarnings("ignore")
 
 class malts:
     def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10):
@@ -107,6 +109,7 @@ class malts:
         self.M = res.x
         self.Mc = self.M[:len(self.continuous)]
         self.Md = self.M[len(self.continuous):]
+        self.M_opt = pd.DataFrame(self.M,columns=self.continuous+self.discrete)
         return res
     
     def get_matched_groups(self, df_estimation, k=10 ):
@@ -248,7 +251,7 @@ class malts_mf:
             df_est = data.iloc[est_idx]
             m = malts( outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k )
             m.fit()
-            self.M_opt_list.append(m.M)
+            self.M_opt_list.append(m.M_opt)
             mg = m.get_matched_groups(df_est,50)
             self.MG_list.append(mg)
             m.CATE(mg).rename(columns={'CATE':'CATE-%d'%(i),'outcome':'outcome-%d'%(i),'treatment':'treatment-%d'%(i)})
