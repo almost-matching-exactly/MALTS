@@ -109,7 +109,7 @@ class malts:
         self.M = res.x
         self.Mc = self.M[:len(self.continuous)]
         self.Md = self.M[len(self.continuous):]
-        self.M_opt = pd.DataFrame(self.M,columns=self.continuous+self.discrete)
+        self.M_opt = pd.DataFrame(self.M.reshape(1,-1),columns=self.continuous+self.discrete,index=['Diag'])
         return res
     
     def get_matched_groups(self, df_estimation, k=10 ):
@@ -169,19 +169,29 @@ class malts:
             matched_X_T = v.loc[v[self.treatment]==1].drop(index='query',errors='ignore')[self.continuous+self.discrete]
             matched_Y_T = v.loc[v[self.treatment]==1].drop(index='query',errors='ignore')[self.outcome]
             x = v.loc['query'][self.continuous+self.discrete].to_numpy().reshape(1,-1)
+            
+            vc = v[self.continuous].to_numpy()
+            vd = v[self.discrete].to_numpy()
+            dvc = np.ones((vc.shape[0],vc.shape[1],vc.shape[0])) * vc.T
+            dist_cont = np.sum( ( (dvc - dvc.T) * (self.Mc.reshape(-1,1)) )**2, axis=1) 
+            dvd = np.ones((vd.shape[0],vd.shape[1],vd.shape[0])) * vd.T
+            dist_dis = np.sum( ( (dvd - dvd.T) * (self.Md.reshape(-1,1)) )**2, axis=1) 
+            dist_mat = dist_cont + dist_dis
+            diameter = np.max(dist_mat)
+            
             if not outcome_discrete:
                 if model=='mean':
                     yt = np.mean(matched_Y_T)
                     yc = np.mean(matched_Y_C)
-                    cate[k] = {'CATE': yt - yc,'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment] }
+                    cate[k] = {'CATE': yt - yc,'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
                 if model=='linear':
                     yc = lm.Ridge().fit( X = matched_X_C, y = matched_Y_C )
                     yt = lm.Ridge().fit( X = matched_X_T, y = matched_Y_T )
-                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment] }
+                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
                 if model=='RF':
                     yc = ensemble.RandomForestRegressor().fit( X = matched_X_C, y = matched_Y_C )
                     yt = ensemble.RandomForestRegressor().fit( X = matched_X_T, y = matched_Y_T )
-                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment] }
+                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
         return pd.DataFrame.from_dict(cate,orient='index')
     
     def visualizeMG(self,MG,a):
@@ -231,10 +241,11 @@ class malts:
             
         
 class malts_mf:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10,n_splits=5):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,n_splits=5):
         self.n_splits = n_splits
         self.C = C
-        self.k = k
+        self.k_tr = k_tr
+        self.k_est = k_est
         self.outcome = outcome
         self.treatment = treatment
         self.discrete = discrete
@@ -249,12 +260,11 @@ class malts_mf:
         for est_idx, train_idx in gen_skf:
             df_train = data.iloc[train_idx]
             df_est = data.iloc[est_idx]
-            m = malts( outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k )
+            m = malts( outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k_tr )
             m.fit()
             self.M_opt_list.append(m.M_opt)
-            mg = m.get_matched_groups(df_est,50)
+            mg = m.get_matched_groups(df_est,k_est)
             self.MG_list.append(mg)
-            m.CATE(mg).rename(columns={'CATE':'CATE-%d'%(i),'outcome':'outcome-%d'%(i),'treatment':'treatment-%d'%(i)})
             self.CATE_df = pd.concat([self.CATE_df, m.CATE(mg)], join='outer', axis=1)
         for i in range(n_splits):
             mg_i = self.MG_list[i]
