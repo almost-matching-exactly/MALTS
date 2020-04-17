@@ -58,21 +58,22 @@ cate_df['std.CATE'] = cate_df.std(axis=1)
 cate_df['re78'] = m.CATE_df['outcome'].mean(axis=1)
 cate_df['treat'] = m.CATE_df['treatment'].mean(axis=1)
 
-clust = cluster.KMeans(n_clusters=3).fit(cate_df['avg.Diam'].to_numpy().reshape(-1,1))
+np.random.seed(0)
+clust = cluster.KMeans(n_clusters=4).fit(cate_df['avg.Diam'].to_numpy().reshape(-1,1))
 
 fig = plt.figure()
 sns.scatterplot(y=cate_df['avg.CATE'],x=cate_df['avg.Diam'],hue=clust.labels_,alpha=0.6,palette='Set1')
-plt.axvline(1e8)
+plt.axvline(6.5e7)
 plt.tight_layout()
 fig.savefig('lalonde_pruning.png')
 
 print(np.mean(cate_df['avg.CATE']))
-print(cate_df.loc[cate_df['avg.Diam']<1e8]['avg.CATE'].mean())
+print(cate_df.loc[cate_df['avg.Diam']<6.5e7]['avg.CATE'].mean())
 print(cate_df.loc[cate_df['treat']==1]['avg.CATE'].mean())
 
 m_opt_list = pd.concat(m.M_opt_list)
 ate_df = np.mean(cate_df,axis=0)
 ate_df = ate_df.rename({'CATE':'ATE','avg.CATE':'avg.ATE'}).drop(['std.CATE'])
-ate_df['avg.ATE-Pruned'] = cate_df.loc[cate_df['avg.Diam']<1e8]['avg.CATE'].mean()
+ate_df['avg.ATE-Pruned'] = cate_df.loc[cate_df['avg.Diam']<6.5e7]['avg.CATE'].mean()
 ate_df['std.ATE'] = ate_df['ATE'].std()
 
