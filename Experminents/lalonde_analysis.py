@@ -43,6 +43,11 @@ ate_df_nsw = np.mean(cate_df_nsw,axis=0)
 ate_df_nsw = ate_df_nsw.rename({'CATE':'ATE','avg.CATE':'avg.ATE'}).drop(['std.CATE'])
 ate_df_nsw['std.ATE'] = ate_df_nsw['ATE'].std()
 
+e_bias = (np.mean(cate_df_nsw['avg.CATE']) - 886)*100/886
+df_nsw_result = pd.DataFrame([['MALTS',np.mean(cate_df_nsw['avg.CATE']),e_bias]],
+                             columns=['Method','ATE Estimate','Estimation Bias (%)'])
+
+df_nsw_result.set_index('Method')
 
 #Matching on NSW+PSID Male Subset of Lalonde's Data
 np.random.seed(0)
@@ -77,3 +82,8 @@ ate_df = ate_df.rename({'CATE':'ATE','avg.CATE':'avg.ATE'}).drop(['std.CATE'])
 ate_df['avg.ATE-Pruned'] = cate_df.loc[cate_df['avg.Diam']<6.5e7]['avg.CATE'].mean()
 ate_df['std.ATE'] = ate_df['ATE'].std()
 
+e_bias = [ (ate_df['avg.ATE'] - 886)*100/886 , (ate_df['avg.ATE-Pruned'] - 886)*100/886]
+df_result = pd.DataFrame([[ 'MALTS', ate_df['avg.ATE'], e_bias[0] ],
+                              [ 'MALTS-Pruned', ate_df['avg.ATE-Pruned'], e_bias[1] ]],
+                             columns=['Method','ATE Estimate','Estimation Bias (%)'])
+df_result.set_index('Method')
