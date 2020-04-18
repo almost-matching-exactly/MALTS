@@ -87,3 +87,5 @@ df_result = pd.DataFrame([[ 'MALTS', ate_df['avg.ATE'], e_bias[0] ],
                               [ 'MALTS-Pruned', ate_df['avg.ATE-Pruned'], e_bias[1] ]],
                              columns=['Method','ATE Estimate','Estimation Bias (%)'])
 df_result.set_index('Method')
+
+#other methods
