@@ -10,6 +10,8 @@ import numpy as np
 import sklearn.ensemble as ensemble
 import pandas as pd
 
+from sklearn.model_selection import StratifiedKFold
+
 class prognostic:
     def __init__(self,Y,T,df,binary=False):
         self.Y = Y
@@ -42,6 +44,7 @@ class prognostic:
             df_temp['Yt'] = [Yet[i]]
             df_temp['T'] = [1]
             df_temp['CATE'] = [Yet[i] - np.mean(Yec[idx[:k]])]
+            df_temp = df_temp.rename(index={0:df_e_t.index[i]})
             df_mg = df_mg.append(df_temp)
         for i in range(0,len(hatYtc)):
             ps = hatYtc[i]
@@ -52,7 +55,23 @@ class prognostic:
             df_temp['Yt'] = [np.mean(Yet[idx[:k]])]
             df_temp['T'] = [0]
             df_temp['CATE'] = [np.mean(Yet[idx[:k]]) - Yec[i]]
+            df_temp = df_temp.rename(index={0:df_e_c.index[i]})
             df_mg = df_mg.append(df_temp)
         return df_mg
     
+def prognostic_cv(outcome, treatment, data,n_splits=5):
+    np.random.seed(0)
+    skf = StratifiedKFold(n_splits=n_splits)
+    gen_skf = skf.split(data,data[treatment])
+    cate_est = pd.DataFrame()
+    for est_idx, train_idx in gen_skf:
+        df_train = data.iloc[train_idx]
+        df_est = data.iloc[est_idx]
+        prog = prognostic(outcome,treatment,df_train)
+        prog_mg = prog.get_matched_group(df_est) 
+        cate_est_i = pd.DataFrame(prog_mg['CATE'])
+        cate_est = pd.concat([cate_est, cate_est_i], join='outer', axis=1)
+    return cate_est
+        
+
             
