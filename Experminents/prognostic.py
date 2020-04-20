@@ -71,6 +71,8 @@ def prognostic_cv(outcome, treatment, data,n_splits=5):
         prog_mg = prog.get_matched_group(df_est) 
         cate_est_i = pd.DataFrame(prog_mg['CATE'])
         cate_est = pd.concat([cate_est, cate_est_i], join='outer', axis=1)
+    cate_est['avg.CATE'] = cate_est.mean(axis=1)
+    cate_est['std.CATE'] = cate_est.std(axis=1)
     return cate_est
         
 

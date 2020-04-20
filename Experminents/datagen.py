@@ -107,7 +107,7 @@ def data_generation_dense_endo_2(num_samples, num_cov_dense, num_covs_unimportan
     df_true['TE'] = te
     return df, df_true
 
-def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, num_covs_unimportant,rho=0):
+def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, num_cont_unimp,num_disc_unimp,rho=0):
     def u(x):
         T = []
         for row in x:
@@ -140,15 +140,15 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     y = T*y1 + (1-T)*y0     # y for conum_treatedrol group 
     te = y1 - y0
      #+ np.random.normal(3, 1.5, size=(num_control, num_covs_unimportant))   # unimportant covariates for control group
-    
+    num_covs_unimportant = num_cont_unimp + num_disc_unimp
     df = pd.DataFrame(np.hstack([x, x2]), columns = list( ['X%d'%(j) for j in range(num_cov_dense + num_covs_unimportant)] ))
     df['Y'] = y
 #    print((len(y),len(T))
     df['T'] = T
-    
+    discrete = ['X%d'%(j) for j in range(num_cont_imp,num_cov_dense)] + ['X%d'%(j) for j in range(num_cov_dense + num_cont_unimp, num_cov_dense + num_covs_unimportant)]
     df_true = pd.DataFrame()
     df_true['Y1'] = y1
     df_true['Y0'] = y0
     df_true['TE'] = te
-    return df, df_true
+    return df, df_true, discrete
 

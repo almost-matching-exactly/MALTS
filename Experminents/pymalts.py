@@ -241,7 +241,7 @@ class malts:
             
         
 class malts_mf:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,n_splits=5):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',n_splits=5):
         self.n_splits = n_splits
         self.C = C
         self.k_tr = k_tr
@@ -265,10 +265,16 @@ class malts_mf:
             self.M_opt_list.append(m.M_opt)
             mg = m.get_matched_groups(df_est,k_est)
             self.MG_list.append(mg)
-            self.CATE_df = pd.concat([self.CATE_df, m.CATE(mg)], join='outer', axis=1)
+            self.CATE_df = pd.concat([self.CATE_df, m.CATE(mg,model=estimator)], join='outer', axis=1)
         for i in range(n_splits):
             mg_i = self.MG_list[i]
             for a in mg_i.index:
                 if a[1]!='query':
                     self.MG_matrix.loc[a[0],a[1]] = self.MG_matrix.loc[a[0],a[1]]+1
-        
+        cate_df = self.CATE_df['CATE']
+        cate_df['avg.CATE'] = cate_df.mean(axis=1)
+        cate_df['std.CATE'] = cate_df.std(axis=1)
+        cate_df[self.outcome] = self.CATE_df['outcome'].mean(axis=1)
+        cate_df[self.treatment] = self.CATE_df['treatment'].mean(axis=1)
+        cate_df['avg.Diameter'] = self.CATE_df['diameter'].mean(axis=1)
+        self.CATE_df = cate_df
