@@ -1,235 +1,147 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Nov 22 19:50:50 2019
+Created on Mon Apr 20 01:31:42 2020
 
-@author: harshparikh
+@author: Harsh
 """
+
+
 import numpy as np
 import pandas as pd
+
 import pymalts
 import prognostic
+import matchit
+import bart
+import causalforest
+
 import datagen as dg
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import seaborn as sns
 import warnings
 warnings.filterwarnings("ignore")
-
+ 
 np.random.seed(0)
 
-numExample = 1000
-num_cov_dense = 10
-num_covs_unimportant = 25
-n_est = 3000
-num_covariates = num_cov_dense+num_covs_unimportant
+num_samples = 2500
+imp_c = 15
+imp_d = 0
+unimp_c = 25
+unimp_d = 0
 
-df_train, df_true_train = dg.data_generation_dense_endo(numExample, num_cov_dense, num_covs_unimportant,rho=0)
+df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(num_samples, imp_c, imp_d, unimp_c, unimp_d, rho=0)
 
-X,Y,T = np.array(df_train[df_train.columns[0:num_covariates]]), np.array(df_train['Y']), np.array(df_train['T'])
+m = pymalts.malts_mf( 'Y', 'T', data = df_data, discrete=discrete, k_tr=15, k_est=80, n_splits=5 )
+cate_df = m.CATE_df
 
-df_est, df_true_est = dg.data_generation_dense_endo(n_est, num_cov_dense, num_covs_unimportant,rho=0.2)
+cate_df['true.CATE'] = df_true['TE'].to_numpy()
 
-Xtest,Ytest,Ttest = np.array(df_est[df_est.columns[0:num_covariates]]), np.array(df_est['Y']), np.array(df_est['T'])
-t_true = df_true_est['TE'].to_numpy()
-ate_true = np.mean(t_true)
-#del Xtest,Ytest,Ttest,df,dense_bs, treatment_eff_coef
+cate_df['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/cate_df['true.CATE'].mean())
+cate_df['Method'] = ['MALTS' for i in range(cate_df.shape[0])]
 
+df_err_malts = pd.DataFrame()
+df_err_malts['Method'] = ['MALTS' for i in range(cate_df.shape[0])]
+df_err_malts['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/cate_df['true.CATE'].mean())
 
-m = pymalts.malts('Y','T',data=df_train, discrete=[], C=5,k=10)
-res = m.fit()
-print(res.x)
-
-mg = m.get_matched_groups(df_est,50)
-
-# cate_mean = m.CATE(mg,model='mean')
-cate_linear = m.CATE(mg,model='linear')
-# cate_RF = m.CATE(mg,model='RF')
-
+##PLOTTING MALTS RESULTS
 fig, ax = plt.subplots()
-plt.scatter(t_true,cate_linear['CATE'],alpha=0.2,c=cate_linear['treatment'])
-plt.colorbar(ticks=[0,1])
+sns.scatterplot(x='true.CATE',y='avg.CATE',size='std.CATE',hue='T',alpha=0.2,sizes=(10,200),data=cate_df)
 lims = [
     np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
     np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
 ]
-
 ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
 ax.set_aspect('equal')
 ax.set_xlim(lims)
 ax.set_ylim(lims)
 plt.xlabel('True CATE')
 plt.ylabel('Estimated CATE')
-fig.savefig('Figures/trueVSestimatedCATE_malts_linear.png')
+fig.savefig('Figures/trueVSestimatedCATE_malts_continuous.png')
 
-err_malts_mean = [] #list( np.array(list( np.abs(t_true - cate_mean['CATE']) )) )
-err_malts_linear = list(np.array(list( np.abs(t_true - cate_linear['CATE']) ))/ate_true )
-err_malts_RF = [] #list(np.array(list( np.abs(t_true - cate_RF['CATE']) )))
+##OTHERS METHODS
+ate_psnn, t_psnn = matchit.matchit('Y','T',data=df_data,method='nearest',replace=True)
 
-label_malts = [ 'MALTS (mean)' for i in range(len(err_malts_mean)) ]+[ 'MALTS (linear)' for i in range(len(err_malts_linear)) ]+[ 'MALTS (RF)' for i in range(len(err_malts_RF)) ]
-err_malts = err_malts_mean + err_malts_linear + err_malts_RF
-
-#----------------------------------------------------------------------------------------------
-##Prognostic
-prog = prognostic.prognostic('Y','T',df_train)
-prog_mg = prog.get_matched_group(df_est) 
-
-err_prog = list(np.array(list( np.abs(t_true - prog_mg['CATE']) ))/ate_true )
-label_prog = [ 'Prognostic Score' for i in range(len(err_prog)) ]
-
-#----------------------------------------------------------------------------------------------
-##DBARTS
-
-import rpy2
-# from rpy2.robjects.vectors import StrVector
-# import rpy2.robjects.packages as rpack
-from rpy2.robjects.packages import importr
-# import rpy2.robjects as robjects
-# import rpy2.robjects.lib as rlib
-from rpy2.robjects.packages import SignatureTranslatedAnonymousPackage
-import rpy2.robjects.numpy2ri
-rpy2.robjects.numpy2ri.activate()
-from rpy2.robjects import pandas2ri
-pandas2ri.activate()
-utils = importr('utils')
-
-Xc = np.array(df_train.loc[df_train['T']==0,df_train.columns[0:num_covariates]])
-Yc = np.array(df_train.loc[df_train['T']==0,'Y'])
-
-Xt = np.array(df_train.loc[df_train['T']==1,df_train.columns[0:num_covariates]])
-Yt = np.array(df_train.loc[df_train['T']==1,'Y'])
-#
-dbarts = importr('dbarts')
-bart_res_c = dbarts.bart(Xc,Yc,Xtest,keeptrees=True,verbose=False)
-y_c_hat_bart = np.array(bart_res_c.rx(8))
-bart_res_t = dbarts.bart(Xt,Yt,Xtest,keeptrees=True,verbose=False)
-y_t_hat_bart = np.array(bart_res_t.rx(8))
-t_hat_bart = np.array(list(y_t_hat_bart - y_c_hat_bart)[0])
-t_true_bart = t_true
-
-err_bart = list( np.abs(t_hat_bart - t_true)/ate_true )
-label_bart = [ 'BART' for i in range(len(err_bart)) ]
-
-#----------------------------------------------------------------------------------------------
-##Causal Forest
-
-base = importr('base')
-
-grf = importr('grf')
-Ycrf = Y.reshape((len(Y),1))
-Tcrf = T.reshape((len(T),1))
-crf = grf.causal_forest(X,Ycrf,Tcrf)
-tauhat = grf.predict_causal_forest(crf,Xtest)
-tau_hat = tauhat['predictions']
-t_hat_crf = np.array([tau_hat[i] for i in range(len(tauhat))])
-t_true_crf = np.array(t_true)
-
-err_crf = list( np.abs(t_hat_crf - t_true)/ate_true )
-label_crf = [ 'Causal Forest' for i in range(len(err_crf)) ]
+df_err_psnn = pd.DataFrame()
+df_err_psnn['Method'] = ['Propensity Score' for i in range(t_psnn.shape[0])] 
+df_err_psnn['Relative Error (%)'] = np.abs((t_psnn['CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
 
 
+ate_gen, t_gen = matchit.matchit('Y','T',data=df_data,method='genetic',replace=True)
 
-# #---------------------------------------------------------------------------------------------
-##MATCHIT Setup
-df_train_matchit = df_train
-df_est_matchit = df_est
-df_train['TE'] = df_true_train['TE']
-df_est['TE'] = df_true_est['TE']
-df_train_matchit.to_csv('non-constant-treatment-continuous.csv',index=False)
-df_est_matchit.to_csv('test-non-constant-treatment-continuous.csv',index=False)
-
-formula_cov = 'X0'
-for j in range(1,num_covariates):
-    formula_cov += '+X%d'%(j)
-
-# #---------------------------------------------------------------------------------------------
-##GenMatch
-string = """
-library('MatchIt')
-mydata <- read.csv('test-non-constant-treatment-continuous.csv')
-r <- matchit( T ~ %s, method = "genetic", data = mydata, replace = TRUE)
-mtch <- mydata[as.numeric(names(r$match.matrix[,])),]
-hh <- mydata[as.numeric(names(r$match.matrix[,])),'Y']- mydata[as.numeric(r$match.matrix[,]),'Y']
-
-mydata2 <- mydata
-mydata2$T <- 1 - mydata2$T
-r2 <- matchit( T ~ %s, method = "genetic", data = mydata2, replace = TRUE)
-mtch2 <- mydata2[as.numeric(names(r2$match.matrix[,])),]
-hh2 <- mydata2[as.numeric(r2$match.matrix[,]),'Y'] - mydata2[as.numeric(names(r2$match.matrix[,])),'Y']
-"""%(formula_cov,formula_cov)
-
-genmatch = SignatureTranslatedAnonymousPackage(string, "powerpack")
-match = genmatch.mtch
-match2 = genmatch.mtch2
-t_true_genmatch = np.hstack((match['TE'],match2['TE']))
-t_hat_genmatch = np.hstack((np.array(genmatch.hh),np.array(genmatch.hh2)))
-
-err_genmatch = list( np.abs(t_hat_genmatch - t_true_genmatch)/ate_true )
-label_genmatch = [ 'GenMatch' for i in range(len(err_genmatch)) ]
+df_err_gen = pd.DataFrame()
+df_err_gen['Method'] = ['GenMatch' for i in range(t_gen.shape[0])] 
+df_err_gen['Relative Error (%)'] = np.abs((t_gen['CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
 
 
-# #---------------------------------------------------------------------------------------------
-##Propensity Score Nearest Neighbor
-string = """
-library('MatchIt')
-mydata <- read.csv('test-non-constant-treatment-continuous.csv')
-r <- matchit( T ~ %s, method = "nearest", data = mydata, replace = TRUE)
-mtch <- mydata[as.numeric(names(r$match.matrix[,])),]
-hh <- mydata[as.numeric(names(r$match.matrix[,])),'Y']- mydata[as.numeric(r$match.matrix[,]),'Y']
+cate_est_prog = prognostic.prognostic_cv('Y', 'T', df_data,n_splits=5)
 
-mydata2 <- mydata
-mydata2$T <- 1 - mydata2$T
-r2 <- matchit( T ~ %s, method = "nearest", data = mydata2, replace = TRUE)
-mtch2 <- mydata2[as.numeric(names(r2$match.matrix[,])),]
-hh2 <- mydata2[as.numeric(r2$match.matrix[,]),'Y'] - mydata2[as.numeric(names(r2$match.matrix[,])),'Y']
-"""%(formula_cov,formula_cov)
-
-psnn = SignatureTranslatedAnonymousPackage(string, "powerpack")
-match = psnn.mtch
-match2 = psnn.mtch2
-t_true_psnn =  np.hstack((match['TE'],match2['TE']))
-t_hat_psnn = np.hstack((np.array(psnn.hh),np.array(psnn.hh2)))
-
-err_psnn = list( np.abs(t_hat_psnn - t_true_psnn)/ate_true )
-label_psnn = [ 'Propensity Score' for i in range(len(err_psnn)) ]
-
-# #---------------------------------------------------------------------------------------------
-##Full Matching
-string = """
-library('MatchIt')
-mydata <- read.csv('test-non-constant-treatment-continuous.csv')
-r <- matchit( T ~ %s, method = "full", data = mydata, replace = TRUE)
-mtch <- mydata[as.numeric(names(r$match.matrix[,])),]
-hh <- mydata[as.numeric(names(r$match.matrix[,])),'Y']- mydata[as.numeric(r$match.matrix[,]),'Y']
-"""%(formula_cov)
-
-full = SignatureTranslatedAnonymousPackage(string, "powerpack")
-match = full.mtch
-t_true_full = match['TE']
-t_hat_full = np.array(full.hh)
-
-err_full = list( np.abs(t_hat_full - t_true_full)/ate_true )
-label_full = [ 'Full Matching' for i in range(len(err_full)) ]
+df_err_prog = pd.DataFrame()
+df_err_prog['Method'] = ['Prognostic Score' for i in range(cate_est_prog.shape[0])] 
+df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
 
 
-# #---------------------------------------------------------------------------------------------
+cate_est_bart = bart.bart('Y','T',df_data,n_splits=5)
 
-err = pd.DataFrame()
-err['Relative CATE Error (percentage)'] = np.array(err_malts + err_bart + err_crf + err_genmatch + err_psnn + err_full + err_prog)*100
-err['Method'] = label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog
+df_err_bart = pd.DataFrame()
+df_err_bart['Method'] = ['BART' for i in range(cate_est_bart.shape[0])] 
+df_err_bart['Relative Error (%)'] = np.abs((cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
 
-fig, ax = plt.subplots(figsize=(40,50))
-sns.boxenplot(x='Method',y='Relative CATE Error (percentage)',data=err)
+
+cate_est_cf = causalforest.causalforest('Y','T',df_data,n_splits=5)
+
+df_err_cf = pd.DataFrame()
+df_err_cf['Method'] = ['Causal Forest' for i in range(cate_est_cf.shape[0])] 
+df_err_cf['Relative Error (%)'] = np.abs((cate_est_cf['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
+
+df_err = pd.DataFrame(columns = ['Method','Relative Error (%)'])
+df_err = df_err.append(df_err_malts).append(df_err_psnn).append(df_err_gen).append(df_err_prog).append(df_err_bart).append(df_err_cf)
+
+fig, ax = plt.subplots(figsize=(20,20))
+sns.boxenplot(x='Method',y='Relative Error (%)',data=df_err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
-fig.savefig('Figures/boxplot_malts.png')
+fig.savefig('Figures/boxplot_multifold_malts_continuous.png')
  
-fig, ax = plt.subplots(figsize=(40,50))
-sns.violinplot(x='Method',y='Relative CATE Error (percentage)',data=err)
+fig, ax = plt.subplots(figsize=(20,20))
+sns.violinplot(x='Method',y='Relative Error (%)',data=df_err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
-fig.savefig('Figures/violin_malts.png')
+fig.savefig('Figures/violin_multifold_malts_continuous.png')
 
-err.to_csv('Logs/CATE_Est_Error_File.csv')
+df_err.to_csv('df_err_continuous.csv')
+
+##VISUALIZING Matched Group Matrix
+fig = plt.figure(figsize=(20,20))
+sns.heatmap(m.MG_matrix)
+fig.savefig('Figures/heatmap_malts_matched_group_continuous.png')
+
+import networkx as nx
+import matplotlib as mpl
+m1 = pymalts.malts_mf( 'Y', 'T', data = df_data, discrete=discrete, k_tr=15, k_est=10, n_splits=5 )
+
+G = nx.from_numpy_matrix(m1.MG_matrix.to_numpy())
+pos = nx.layout.spring_layout(G,k=2,iterations=500)
+pos2 = nx.layout.spectral_layout(G)
+
+edges,weights = zip(*nx.get_edge_attributes(G,'weight').items())
+
+node_sizes = [1 for i in range(len(G))]
+M = G.number_of_edges()
+
+nodes = nx.draw_networkx_nodes(G, pos, node_size=node_sizes, node_color='black')
+edges = nx.draw_networkx_edges(G, pos, node_size=node_sizes,  arrowstyle='->',
+                               arrowsize=5, edge_color=weights, alpha=0.2,
+                               edge_cmap=plt.cm.Blues, width=1)
+# set alpha value for each edge
+for i in range(M):
+    edges[i].set_alpha(edge_alphas[i])
+
+pc = mpl.collections.PatchCollection(edges, cmap=plt.cm.Blues)
+pc.set_array(edge_colors)
+plt.colorbar(pc)
+
+ax = plt.gca()
+ax.set_axis_off()
