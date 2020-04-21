@@ -96,15 +96,16 @@ df_err_cf['Relative Error (%)'] = np.abs((cate_est_cf['avg.CATE'].to_numpy() - d
 
 df_err = pd.DataFrame(columns = ['Method','Relative Error (%)'])
 df_err = df_err.append(df_err_malts).append(df_err_psnn).append(df_err_gen).append(df_err_prog).append(df_err_bart).append(df_err_cf)
+df_err['Relative Error (%)'] = df_err['Relative Error (%)'] * 100
 
-fig, ax = plt.subplots(figsize=(20,20))
+fig, ax = plt.subplots()
 sns.boxenplot(x='Method',y='Relative Error (%)',data=df_err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('Figures/boxplot_multifold_malts_continuous.png')
  
-fig, ax = plt.subplots(figsize=(20,20))
+fig, ax = plt.subplots()
 sns.violinplot(x='Method',y='Relative Error (%)',data=df_err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
@@ -114,34 +115,34 @@ fig.savefig('Figures/violin_multifold_malts_continuous.png')
 df_err.to_csv('df_err_continuous.csv')
 
 ##VISUALIZING Matched Group Matrix
-fig = plt.figure(figsize=(20,20))
+fig = plt.figure()
 sns.heatmap(m.MG_matrix)
 fig.savefig('Figures/heatmap_malts_matched_group_continuous.png')
 
 import networkx as nx
 import matplotlib as mpl
-m1 = pymalts.malts_mf( 'Y', 'T', data = df_data, discrete=discrete, k_tr=15, k_est=10, n_splits=5 )
+m1 = pymalts.malts_mf( 'Y', 'T', data = df_data.head(100), discrete=discrete, k_tr=2, k_est=2, n_splits=5, estimator='mean' )
 
-G = nx.from_numpy_matrix(m1.MG_matrix.to_numpy())
-pos = nx.layout.spring_layout(G,k=2,iterations=500)
+np.fill_diagonal(m1.MG_matrix.to_numpy(),0)
+fig = plt.figure()
+sns.heatmap(m1.MG_matrix.to_numpy())
+fig.savefig('Figures/demo_heatmap_malts_matched_group_continuous.png')
+
+G = nx.from_numpy_matrix(m1.MG_matrix.to_numpy(),create_using=nx.DiGraph())
+pos = nx.layout.fruchterman_reingold_layout(G)
 pos2 = nx.layout.spectral_layout(G)
 
 edges,weights = zip(*nx.get_edge_attributes(G,'weight').items())
 
-node_sizes = [1 for i in range(len(G))]
+node_sizes = [20 for i in range(len(G))]
 M = G.number_of_edges()
 
-nodes = nx.draw_networkx_nodes(G, pos, node_size=node_sizes, node_color='black')
-edges = nx.draw_networkx_edges(G, pos, node_size=node_sizes,  arrowstyle='->',
-                               arrowsize=5, edge_color=weights, alpha=0.2,
-                               edge_cmap=plt.cm.Blues, width=1)
-# set alpha value for each edge
-for i in range(M):
-    edges[i].set_alpha(edge_alphas[i])
+nodes = nx.draw_networkx_nodes(G, pos, node_size=node_sizes, 
+                               node_color=df_data.head(100)['T'], label=df_data.head(100)['T'],
+                               cmap=plt.cm.Set1)
 
-pc = mpl.collections.PatchCollection(edges, cmap=plt.cm.Blues)
-pc.set_array(edge_colors)
-plt.colorbar(pc)
+edges = nx.draw_networkx_edges(G, pos, node_size=node_sizes, arrowsize=10, edge_color=weights, alpha=0.2,
+                               edge_cmap=plt.cm.Blues, width=weights)
 
-ax = plt.gca()
-ax.set_axis_off()
+plt.colorbar(nodes)
+
