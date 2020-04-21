@@ -30,8 +30,8 @@ X,Y,T = np.array(df_train[df_train.columns[0:num_covariates]]), np.array(df_trai
 
 df_est, df_true_est = dg.data_generation_dense_endo(n_est, num_cov_dense, num_covs_unimportant,rho=0.2)
 
-df_data = df_train.append(df_est)
-df_data_true = df_true_train.append(df_true_est)
+df_data = df_train.append(df_est,ignore_index=True)
+df_data_true = df_true_train.append(df_true_est,ignore_index=True)
 
 Xtest,Ytest,Ttest = np.array(df_est[df_est.columns[0:num_covariates]]), np.array(df_est['Y']), np.array(df_est['T'])
 t_true = df_true_est['TE'].to_numpy()
