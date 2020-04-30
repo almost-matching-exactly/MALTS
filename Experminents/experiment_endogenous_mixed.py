@@ -97,14 +97,19 @@ df_err_cf['Relative Error (%)'] = np.abs((cate_est_cf['avg.CATE'].to_numpy() - d
 df_err = pd.DataFrame(columns = ['Method','Relative Error (%)'])
 df_err = df_err.append(df_err_malts).append(df_err_psnn).append(df_err_gen).append(df_err_prog).append(df_err_bart).append(df_err_cf)
 
-fig, ax = plt.subplots(figsize=(20,20))
+df_err['Relative Error (%)'] = df_err['Relative Error (%)'] * 100
+
+sns.set_context("paper")
+sns.set_style("darkgrid")
+
+fig, ax = plt.subplots()
 sns.boxenplot(x='Method',y='Relative Error (%)',data=df_err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('Figures/boxplot_multifold_malts_mixed.png')
  
-fig, ax = plt.subplots(figsize=(20,20))
+fig, ax = plt.subplots()
 sns.violinplot(x='Method',y='Relative Error (%)',data=df_err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())

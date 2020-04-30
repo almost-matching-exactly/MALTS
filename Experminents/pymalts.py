@@ -14,7 +14,7 @@ import sklearn.ensemble as ensemble
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import RepeatedStratifiedKFold
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -241,7 +241,7 @@ class malts:
             
         
 class malts_mf:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',n_splits=5):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',n_splits=5,n_repeats=1):
         self.n_splits = n_splits
         self.C = C
         self.k_tr = k_tr
@@ -249,7 +249,7 @@ class malts_mf:
         self.outcome = outcome
         self.treatment = treatment
         self.discrete = discrete
-        skf = StratifiedKFold(n_splits=n_splits)
+        skf = RepeatedStratifiedKFold(n_splits=n_splits,n_repeats=n_repeats,random_state=0)
         gen_skf = skf.split(data,data[treatment])
         self.M_opt_list = []
         self.MG_list = []

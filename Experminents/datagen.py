@@ -107,11 +107,11 @@ def data_generation_dense_endo_2(num_samples, num_cov_dense, num_covs_unimportan
     df_true['TE'] = te
     return df, df_true
 
-def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, num_cont_unimp,num_disc_unimp,rho=0):
+def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, num_cont_unimp,num_disc_unimp,rho=0,scale=1,overlap=20):
     def u(x):
         T = []
         for row in x:
-            l = ( 1 + np.tanh( ( row[0] + row[1] ) / 20 ) ) / 2
+            l = ( 1 + np.tanh( ( row[0] + row[1] ) / overlap ) ) / 2
             t = np.random.binomial(1,l/2)
             T.append(t)
         return np.array(T)
@@ -120,7 +120,7 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     xd = np.random.binomial(1, 0.5, size=(num_samples, num_disc_imp))   # data for conum_treatedrol group
     x = np.hstack((xc,xd))
     
-    errors = np.random.normal(0, 1, size=num_samples)    # some noise
+    errors = np.random.normal(0, scale, size=num_samples)    # some noise
     
     num_cov_dense = num_cont_imp + num_disc_imp
     dense_bs_sign = np.random.choice([-1,1], num_cov_dense)
