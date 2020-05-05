@@ -8,6 +8,7 @@ Created on Thu Feb 20 17:00:40 2020
 
 import numpy as np
 import pandas as pd
+import scipy
 
 def construct_sec_order(arr):
     # an intermediate data generation function used for generating second order information
@@ -107,18 +108,32 @@ def data_generation_dense_endo_2(num_samples, num_cov_dense, num_covs_unimportan
     df_true['TE'] = te
     return df, df_true
 
-def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, num_cont_unimp,num_disc_unimp,rho=0,scale=1,overlap=20):
+def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, num_cont_unimp,num_disc_unimp,rho=0,scale=1,overlap=1000,coverage=False):
     def u(x):
         T = []
         for row in x:
-            l = ( 1 + np.tanh( ( row[0] + row[1] ) / overlap ) ) / 2
-            t = np.random.binomial(1,l/2)
+            l = scipy.special.expit(row[0]+row[1]-2+np.random.normal(0,overlap))
+            t = int( l > 0.5 )
+            # l = ( 1 + np.tanh( ( row[0] + row[1] ) / 20 ) ) / 2
+            # t = np.random.binomial(1,l/2)
             T.append(t)
         return np.array(T)
     # the data generating function that we will use. include second order information
     xc = np.random.normal(1, 1.5, size=(num_samples, num_cont_imp)) #+ np.random.lognormal(1, 0.25, size=(num_control, num_cov_dense))   # data for conum_treatedrol group
     xd = np.random.binomial(1, 0.5, size=(num_samples, num_disc_imp))   # data for conum_treatedrol group
     x = np.hstack((xc,xd))
+    if coverage:
+        x_analyse = np.array([[1,1],
+                              [2.5,2.5],
+                              [-0.5,-0.5],
+                              [2.5,-0.5],
+                              [-0.5,2.5],
+                              [4.0,4.0],
+                              [-3.0,-3.0],
+                              [4.0,-3.0],
+                              [-3.0,4.0]])
+        num_samples += 9
+        x = np.vstack((x_analyse,x))
     
     errors = np.random.normal(0, scale, size=num_samples)    # some noise
     

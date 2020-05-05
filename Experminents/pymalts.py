@@ -249,6 +249,8 @@ class malts_mf:
         self.outcome = outcome
         self.treatment = treatment
         self.discrete = discrete
+        self.continuous = list(set(data.columns).difference(set([outcome]+[treatment]+discrete)))
+        
         skf = RepeatedStratifiedKFold(n_splits=n_splits,n_repeats=n_repeats,random_state=0)
         gen_skf = skf.split(data,data[treatment])
         self.M_opt_list = []
@@ -256,6 +258,7 @@ class malts_mf:
         self.CATE_df = pd.DataFrame()
         N = np.zeros((data.shape[0],data.shape[0]))
         self.MG_matrix = pd.DataFrame(N, columns=data.index, index=data.index)
+        
         i = 0
         for est_idx, train_idx in gen_skf:
             df_train = data.iloc[train_idx]
@@ -266,15 +269,32 @@ class malts_mf:
             mg = m.get_matched_groups(df_est,k_est)
             self.MG_list.append(mg)
             self.CATE_df = pd.concat([self.CATE_df, m.CATE(mg,model=estimator)], join='outer', axis=1)
-        for i in range(n_splits):
+        
+        for i in range(n_splits*n_repeats):
             mg_i = self.MG_list[i]
             for a in mg_i.index:
                 if a[1]!='query':
                     self.MG_matrix.loc[a[0],a[1]] = self.MG_matrix.loc[a[0],a[1]]+1
+        
         cate_df = self.CATE_df['CATE']
         cate_df['avg.CATE'] = cate_df.mean(axis=1)
         cate_df['std.CATE'] = cate_df.std(axis=1)
         cate_df[self.outcome] = self.CATE_df['outcome'].mean(axis=1)
         cate_df[self.treatment] = self.CATE_df['treatment'].mean(axis=1)
         cate_df['avg.Diameter'] = self.CATE_df['diameter'].mean(axis=1)
+        
+        LOWER_ALPHA = 0.05
+        UPPER_ALPHA = 0.95
+        # Each model has to be separate
+        lower_model = ensemble.GradientBoostingRegressor(loss='quantile',alpha=LOWER_ALPHA)
+        # The mid model will use the default loss
+        mid_model = ensemble.GradientBoostingRegressor(loss="ls")
+        upper_model = ensemble.GradientBoostingRegressor(loss="quantile",alpha=UPPER_ALPHA)
+        lower_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        mid_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        upper_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        
+        cate_df['std.gbr.CATE'] = upper_model.predict(data[self.continuous+self.discrete]) - lower_model.predict(data[self.continuous+self.discrete])
+        cate_df['avg.gbr.CATE'] = mid_model.predict(data[self.continuous+self.discrete])
+        
         self.CATE_df = cate_df
