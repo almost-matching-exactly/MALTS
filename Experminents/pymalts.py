@@ -20,7 +20,7 @@ warnings.filterwarnings("ignore")
 
 class malts:
     def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10):
-        np.random.seed(0)
+        # np.random.seed(0)
         self.C = C #coefficient to regularozation term
         self.k = k
         self.n, self.p = data.shape
@@ -103,7 +103,7 @@ class malts:
         return delta + reg + cons1 + cons2
         
     def fit(self,method='COBYLA'):
-        np.random.seed(0)
+        # np.random.seed(0)
         M_init = np.ones((self.p,))
         res = opt.minimize( self.objective, x0=M_init,method=method )
         self.M = res.x
@@ -294,7 +294,7 @@ class malts_mf:
         mid_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
         upper_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
         
-        cate_df['std.gbr.CATE'] = upper_model.predict(data[self.continuous+self.discrete]) - lower_model.predict(data[self.continuous+self.discrete])
+        cate_df['std.gbr.CATE'] = np.abs(upper_model.predict(data[self.continuous+self.discrete]) - lower_model.predict(data[self.continuous+self.discrete]))/4
         cate_df['avg.gbr.CATE'] = mid_model.predict(data[self.continuous+self.discrete])
         
         self.CATE_df = cate_df
