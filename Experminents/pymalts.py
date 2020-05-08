@@ -11,6 +11,7 @@ import scipy.optimize as opt
 import pandas as pd
 import sklearn.linear_model as lm
 import sklearn.ensemble as ensemble
+import sklearn.gaussian_process as gp
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -297,4 +298,9 @@ class malts_mf:
         cate_df['std.gbr.CATE'] = np.abs(upper_model.predict(data[self.continuous+self.discrete]) - lower_model.predict(data[self.continuous+self.discrete]))/4
         cate_df['avg.gbr.CATE'] = mid_model.predict(data[self.continuous+self.discrete])
         
+        gaussian_model = gp.GaussianProcessRegressor(n_restarts_optimizer=100,normalize_y=False)
+        gaussian_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        gp_pred = gaussian_model.predict(data[self.continuous+self.discrete], return_std=True)
+        cate_df['std.gp.CATE'] = gp_pred[1]
+        cate_df['avg.gp.CATE'] = gp_pred[0]
         self.CATE_df = cate_df
