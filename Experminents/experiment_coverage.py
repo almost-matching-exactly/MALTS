@@ -59,7 +59,7 @@ for i in range(0,9):
     # axi.axhline(y=0.9,c='black',alpha=0.2)
     # axi.axhline(y=0.8,c='black',alpha=0.2)
 handles, labels = axi.get_legend_handles_labels()
-fig.legend(handles, labels, loc='lower right',ncol=2)
+fig.legend(handles, labels, loc='lower right',ncol=3)
 plt.tight_layout()
 plt.yticks(ticks=[1,0.8,0.9,0.5,0],label=['1','0.8','0.9','0.5','0'])
 
