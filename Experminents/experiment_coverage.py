@@ -12,28 +12,30 @@ import pymalts
 import seaborn as sns
 import matplotlib.pyplot as plt
 import tabulate
-n = 200
+n = 300
 p = 2
 
 std = np.sqrt([1,2,3,4])
 coverage_malts_std = pd.DataFrame()
 coverage_true_std = []
 for scale in std:
-    for rep in range(10):
+    for rep in range(50):
         df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(n, p, 0, 0, 0, rho=0, scale=scale, coverage=True)
-        m = pymalts.malts_mf( 'Y', 'T', data = df_data, discrete=discrete, k_tr=10, k_est=10, n_splits=2, n_repeats=2)
+        m = pymalts.malts_mf( 'Y', 'T', data = df_data, discrete=discrete, k_tr=10, k_est=10, n_splits=2, n_repeats=3)
         cate_df = m.CATE_df
         cate_df['true.CATE'] = df_true['TE'].to_numpy()
         cate_df['covered.MALTS.var %.1f'%(scale**2)] = np.abs(cate_df['avg.CATE'].iloc[0:9] - cate_df['true.CATE'].iloc[0:9]) < 2*cate_df['std.CATE'].iloc[0:9]
         cate_df['covered.MALTS.gbr.var %.1f'%(scale**2)] = np.abs(cate_df['avg.gbr.CATE'].iloc[0:9] - cate_df['true.CATE'].iloc[0:9]) < 2*cate_df['std.gbr.CATE'].iloc[0:9]
         cate_df['covered.MALTS.gp.var %.1f'%(scale**2)] = np.abs(cate_df['avg.gp.CATE'].iloc[0:9] - cate_df['true.CATE'].iloc[0:9]) < 2*cate_df['std.gp.CATE'].iloc[0:9]
+        cate_df['covered.MALTS.br.var %.1f'%(scale**2)] = np.abs(cate_df['avg.br.CATE'].iloc[0:9] - cate_df['true.CATE'].iloc[0:9]) < 2*cate_df['std.br.CATE'].iloc[0:9]
         # cate_df['covered.True.std'] = np.abs(cate_df['avg.CATE'] - cate_df['true.CATE']) < 4*scale
         
         coverage_df = pd.DataFrame()
         coverage_df['var'] = [(scale**2) for i in range(0,9)]
-        coverage_df['Bootstrap Variance'] = cate_df['covered.MALTS.var %.1f'%(scale**2)].iloc[0:9].astype(int)
+        # coverage_df['Bootstrap Variance'] = cate_df['covered.MALTS.var %.1f'%(scale**2)].iloc[0:9].astype(int)
         coverage_df['Gradient Boosting Regressor Variance'] = cate_df['covered.MALTS.gbr.var %.1f'%(scale**2)].iloc[0:9].astype(int)
         coverage_df['Gaussian Process Regressor Variance'] = cate_df['covered.MALTS.gp.var %.1f'%(scale**2)].iloc[0:9].astype(int)
+        coverage_df['Bayesian Ridge Regressor Variance'] = cate_df['covered.MALTS.br.var %.1f'%(scale**2)].iloc[0:9].astype(int)
         
         # coverage_df = pd.DataFrame(cate_df[['covered.MALTS.var %.1f'%(scale**2),'covered.MALTS.gbr.var %.1f'%(scale**2)]].iloc[0:9])               
         # print(tabulate.tabulate(cate_df.iloc[:9][['avg.CATE','avg.gbr.CATE','true.CATE','std.CATE','std.gbr.CATE','covered.MALTS.var %.1f'%(scale**2),'covered.MALTS.gbr.var %.1f'%(scale**2)]], headers='keys'))
@@ -46,9 +48,10 @@ df_coverage.to_csv('coverage.csv')
 fig, axes = plt.subplots(nrows=3, ncols=3,sharey=True,sharex=True)
 for i in range(0,9):
     df_coverage_i = df_coverage.loc[i]
-    df_coverage_i['Bootstrap Variance'] = df_coverage_i['Bootstrap Variance'].astype(int)
+    # df_coverage_i['Bootstrap Variance'] = df_coverage_i['Bootstrap Variance'].astype(int)
     df_coverage_i['Gradient Boosting Regressor Variance'] = df_coverage_i['Gradient Boosting Regressor Variance'].astype(int)
     df_coverage_i['Gaussian Process Regressor Variance'] = df_coverage_i['Gaussian Process Regressor Variance'].astype(int)
+    df_coverage_i['Bayesian Ridge Regressor Variance'] = df_coverage_i['Bayesian Ridge Regressor Variance'].astype(int)
     df_coverage_i = df_coverage_i.groupby('var').mean()
     axi = axes[i//3,i%3]
     df_coverage_i.plot(ax=axi,legend=False,grid=True)
@@ -63,9 +66,10 @@ plt.yticks(ticks=[1,0.8,0.9,0.5,0],label=['1','0.8','0.9','0.5','0'])
 fig, axes = plt.subplots(nrows=2, ncols=2,sharey=True,sharex=True)
 for i in range(1,5):
     df_coverage_i = df_coverage.loc[i]
-    df_coverage_i['Bootstrap Variance'] = df_coverage_i['Bootstrap Variance'].astype(int)
+    # df_coverage_i['Bootstrap Variance'] = df_coverage_i['Bootstrap Variance'].astype(int)
     df_coverage_i['Gradient Boosting Regressor Variance'] = df_coverage_i['Gradient Boosting Regressor Variance'].astype(int)
     df_coverage_i['Gaussian Process Regressor Variance'] = df_coverage_i['Gaussian Process Regressor Variance'].astype(int)
+    df_coverage_i['Bayesian Ridge Regressor Variance'] = df_coverage_i['Bayesian Ridge Regressor Variance'].astype(int)
     df_coverage_i = df_coverage_i.groupby('var').mean()
     axi = axes[(i-1)//2,(i-1)%2]
     df_coverage_i.plot(ax=axi,legend=False,grid=True)

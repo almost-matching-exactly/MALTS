@@ -128,10 +128,10 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
                               [-0.5,-0.5],
                               [2.5,-0.5],
                               [-0.5,2.5],
-                              [4.0,4.0],
-                              [-3.0,-3.0],
-                              [4.0,-3.0],
-                              [-3.0,4.0]])
+                              [2.5,1.0],
+                              [1.0,2.5],
+                              [1.0,-0.5],
+                              [-0.5,1.0]])
         num_samples += 9
         x = np.vstack((x_analyse,x))
     
