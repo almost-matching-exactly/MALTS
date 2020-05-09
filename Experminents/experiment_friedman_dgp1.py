@@ -31,7 +31,10 @@ def u(x):
 
 def TE(X):
     return X[:,2]*np.cos(np.pi * X[:, 0] * X[:, 1])
-    
+
+np.random.seed(0)
+
+##GENERATE DATA
 n = 6000
 p = 10
 e = 1
@@ -44,21 +47,23 @@ columns = ['X%d'%(i) for i in range(p)] + ['Y','T']
 df_data = pd.DataFrame(np.hstack((X,Y.reshape(-1,1),T.reshape(-1,1))),columns=columns)
 df_true = pd.DataFrame(np.hstack((Y0.reshape(-1,1),Y1.reshape(-1,1),TE(X).reshape(-1,1),T.reshape(-1,1))),columns=['Y0','Y1','TE','T'])
 
+##MALTS
 m = pymalts.malts_mf( 'Y', 'T', data = df_data, discrete=[], k_tr=20, k_est=100, n_splits=5, n_repeats=2)
 cate_df = m.CATE_df
 
+##MALTS Result Analysis
 cate_df['true.CATE'] = df_true['TE'].to_numpy()
 
-cate_df['Relative Error (%)'] = np.abs((cate_df['avg.gbr.CATE']-cate_df['true.CATE'])/cate_df['true.CATE'].mean())
+cate_df['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/cate_df['true.CATE'].mean())
 cate_df['Method'] = ['MALTS' for i in range(cate_df.shape[0])]
 
 df_err_malts = pd.DataFrame()
 df_err_malts['Method'] = ['MALTS' for i in range(cate_df.shape[0])]
-df_err_malts['Relative Error (%)'] = np.abs((cate_df['avg.gbr.CATE']-cate_df['true.CATE'])/cate_df['true.CATE'].mean())
+df_err_malts['Relative Error (%)'] = np.abs((cate_df['avg.CATE']-cate_df['true.CATE'])/cate_df['true.CATE'].mean())
 
 ##PLOTTING MALTS RESULTS
 fig, ax = plt.subplots()
-sns.scatterplot(x='true.CATE',y='avg.gbr.CATE',size='std.gbr.CATE',hue='T',alpha=0.2,sizes=(10,200),data=cate_df)
+sns.scatterplot(x='true.CATE',y='avg.CATE',size='std.CATE',hue='T',alpha=0.2,sizes=(10,200),data=cate_df)
 lims = [
     np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
     np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes

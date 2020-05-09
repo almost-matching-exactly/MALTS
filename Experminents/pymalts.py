@@ -242,7 +242,7 @@ class malts:
             
         
 class malts_mf:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',n_splits=5,n_repeats=1):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',smooth_cate=True,n_splits=5,n_repeats=1):
         self.n_splits = n_splits
         self.C = C
         self.k_tr = k_tr
@@ -303,4 +303,8 @@ class malts_mf:
         gp_pred = gaussian_model.predict(data[self.continuous+self.discrete], return_std=True)
         cate_df['std.gp.CATE'] = gp_pred[1]
         cate_df['avg.gp.CATE'] = gp_pred[0]
+        
+        if smooth_cate:
+            cate_df['avg.CATE'] = cate_df['avg.gbr.CATE']
+        cate_df['std.CATE'] = cate_df['std.gbr.CATE']
         self.CATE_df = cate_df
