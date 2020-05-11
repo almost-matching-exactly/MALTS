@@ -56,12 +56,13 @@ for i in range(0,9):
     axi = axes[i//3,i%3]
     df_coverage_i.plot(ax=axi,legend=False,grid=True)
     axi.title.set_text(df_data[['X0','X1']].iloc[i].to_string())
+    axi.set_ylim([0.75, 1.05])
     # axi.axhline(y=0.9,c='black',alpha=0.2)
     # axi.axhline(y=0.8,c='black',alpha=0.2)
 handles, labels = axi.get_legend_handles_labels()
 fig.legend(handles, labels, loc='lower right',ncol=3)
-plt.tight_layout()
 plt.yticks(ticks=[1,0.8,0.9,0.5,0],label=['1','0.8','0.9','0.5','0'])
+fig.savefig('coverage_1.png')
 
 fig, axes = plt.subplots(nrows=2, ncols=2,sharey=True,sharex=True)
 for i in range(1,5):
