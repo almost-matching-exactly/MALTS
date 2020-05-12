@@ -21,10 +21,11 @@ import warnings
 warnings.filterwarnings("ignore")
 
 class malts:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10,reweight=False):
         # np.random.seed(0)
         self.C = C #coefficient to regularozation term
         self.k = k
+        self.reweight = reweight
         self.n, self.p = data.shape
         self.p = self.p - 2 #shape of the data
         self.outcome = outcome
@@ -93,7 +94,10 @@ class malts:
         self.W_C = self.calcW_C(Mc,Md)
         self.delta_T = np.sum((self.Y_T - (np.matmul(self.W_T,self.Y_T) - np.diag(self.W_T)*self.Y_T))**2)
         self.delta_C = np.sum((self.Y_C - (np.matmul(self.W_C,self.Y_C) - np.diag(self.W_C)*self.Y_C))**2)
-        return self.delta_T + self.delta_C
+        if self.reweight == False:
+            return self.delta_T + self.delta_C
+        elif self.reweight == True:
+            return (len(self.Y_T)+len(self.Y_C))*(self.delta_T/len(self.Y_T) + self.delta_C/len(self.Y_C))
     
     def objective(self,M):
         Mc = M[:len(self.continuous)]
@@ -243,7 +247,7 @@ class malts:
             
         
 class malts_mf:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',smooth_cate=True,n_splits=5,n_repeats=1):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',smooth_cate=True,reweight=False,n_splits=5,n_repeats=1):
         self.n_splits = n_splits
         self.C = C
         self.k_tr = k_tr
@@ -252,6 +256,7 @@ class malts_mf:
         self.treatment = treatment
         self.discrete = discrete
         self.continuous = list(set(data.columns).difference(set([outcome]+[treatment]+discrete)))
+        self.reweight = reweight
         
         skf = RepeatedStratifiedKFold(n_splits=n_splits,n_repeats=n_repeats,random_state=0)
         gen_skf = skf.split(data,data[treatment])
@@ -265,7 +270,7 @@ class malts_mf:
         for est_idx, train_idx in gen_skf:
             df_train = data.iloc[train_idx]
             df_est = data.iloc[est_idx]
-            m = malts( outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k_tr )
+            m = malts( outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k_tr, reweight=self.reweight )
             m.fit()
             self.M_opt_list.append(m.M_opt)
             mg = m.get_matched_groups(df_est,k_est)
@@ -315,4 +320,5 @@ class malts_mf:
         if smooth_cate:
             cate_df['avg.CATE'] = cate_df['avg.gbr.CATE']
         cate_df['std.CATE'] = cate_df['std.gbr.CATE']
+        
         self.CATE_df = cate_df

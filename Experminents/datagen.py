@@ -108,11 +108,11 @@ def data_generation_dense_endo_2(num_samples, num_cov_dense, num_covs_unimportan
     df_true['TE'] = te
     return df, df_true
 
-def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, num_cont_unimp,num_disc_unimp,rho=0,scale=1,overlap=1000,coverage=False):
+def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, num_cont_unimp,num_disc_unimp,rho=0,scale=1,overlap=1000,bias=2,coverage=False):
     def u(x):
         T = []
         for row in x:
-            l = scipy.special.expit(row[0]+row[1]-2+np.random.normal(0,overlap))
+            l = scipy.special.expit(row[0]+row[1]-bias+np.random.normal(0,overlap))
             t = int( l > 0.5 )
             # l = ( 1 + np.tanh( ( row[0] + row[1] ) / 20 ) ) / 2
             # t = np.random.binomial(1,l/2)
