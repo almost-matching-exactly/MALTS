@@ -167,3 +167,18 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     df_true['TE'] = te
     return df, df_true, discrete
 
+def sensitivity_datagen(n,p,ay,az):
+    betay = np.ones((p,1))
+    betaz = np.vstack((np.ones((2,1)),np.zeros((p-2,1))))
+    tau = 1
+    sigmay = 1
+    piu = 0.5
+    X = np.random.normal(0,1,size=(n,p))
+    U = np.random.binomial(1,piu,size=(n,1))
+    T = np.random.binomial(1,scipy.special.expit(np.dot(X,betaz)+U*az-2))
+    Y0 = np.random.normal(np.dot(X,betay)+U*ay,sigmay)
+    Y1 = Y0 + tau 
+    Y = T*Y1 + (1-T)*Y0
+    df = pd.DataFrame(np.hstack((X,Y,T)),columns=['X%d'%(i) for i in range(0,p)]+['Y','T'])
+    df_true = pd.DataFrame(np.hstack((X,Y,T,Y0,Y1)),columns=['X%d'%(i) for i in range(0,p)]+['Y','T','Y0','Y1'])
+    return df, df_true
