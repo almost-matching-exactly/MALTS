@@ -11,18 +11,21 @@ import scipy.optimize as opt
 import pandas as pd
 import sklearn.linear_model as lm
 import sklearn.ensemble as ensemble
+import sklearn.gaussian_process as gp
+from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import RepeatedStratifiedKFold
 import warnings
 warnings.filterwarnings("ignore")
 
 class malts:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10):
-        np.random.seed(0)
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10,reweight=False):
+        # np.random.seed(0)
         self.C = C #coefficient to regularozation term
         self.k = k
+        self.reweight = reweight
         self.n, self.p = data.shape
         self.p = self.p - 2 #shape of the data
         self.outcome = outcome
@@ -91,7 +94,10 @@ class malts:
         self.W_C = self.calcW_C(Mc,Md)
         self.delta_T = np.sum((self.Y_T - (np.matmul(self.W_T,self.Y_T) - np.diag(self.W_T)*self.Y_T))**2)
         self.delta_C = np.sum((self.Y_C - (np.matmul(self.W_C,self.Y_C) - np.diag(self.W_C)*self.Y_C))**2)
-        return self.delta_T + self.delta_C
+        if self.reweight == False:
+            return self.delta_T + self.delta_C
+        elif self.reweight == True:
+            return (len(self.Y_T)+len(self.Y_C))*(self.delta_T/len(self.Y_T) + self.delta_C/len(self.Y_C))
     
     def objective(self,M):
         Mc = M[:len(self.continuous)]
@@ -103,7 +109,7 @@ class malts:
         return delta + reg + cons1 + cons2
         
     def fit(self,method='COBYLA'):
-        np.random.seed(0)
+        # np.random.seed(0)
         M_init = np.ones((self.p,))
         res = opt.minimize( self.objective, x0=M_init,method=method )
         self.M = res.x
@@ -241,7 +247,7 @@ class malts:
             
         
 class malts_mf:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',n_splits=5):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',smooth_cate=True,reweight=False,n_splits=5,n_repeats=1):
         self.n_splits = n_splits
         self.C = C
         self.k_tr = k_tr
@@ -249,32 +255,70 @@ class malts_mf:
         self.outcome = outcome
         self.treatment = treatment
         self.discrete = discrete
-        skf = StratifiedKFold(n_splits=n_splits)
+        self.continuous = list(set(data.columns).difference(set([outcome]+[treatment]+discrete)))
+        self.reweight = reweight
+        
+        skf = RepeatedStratifiedKFold(n_splits=n_splits,n_repeats=n_repeats,random_state=0)
         gen_skf = skf.split(data,data[treatment])
         self.M_opt_list = []
         self.MG_list = []
         self.CATE_df = pd.DataFrame()
         N = np.zeros((data.shape[0],data.shape[0]))
         self.MG_matrix = pd.DataFrame(N, columns=data.index, index=data.index)
+        
         i = 0
         for est_idx, train_idx in gen_skf:
             df_train = data.iloc[train_idx]
             df_est = data.iloc[est_idx]
-            m = malts( outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k_tr )
+            m = malts( outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k_tr, reweight=self.reweight )
             m.fit()
             self.M_opt_list.append(m.M_opt)
             mg = m.get_matched_groups(df_est,k_est)
             self.MG_list.append(mg)
             self.CATE_df = pd.concat([self.CATE_df, m.CATE(mg,model=estimator)], join='outer', axis=1)
-        for i in range(n_splits):
+        
+        for i in range(n_splits*n_repeats):
             mg_i = self.MG_list[i]
             for a in mg_i.index:
                 if a[1]!='query':
                     self.MG_matrix.loc[a[0],a[1]] = self.MG_matrix.loc[a[0],a[1]]+1
+        
         cate_df = self.CATE_df['CATE']
         cate_df['avg.CATE'] = cate_df.mean(axis=1)
         cate_df['std.CATE'] = cate_df.std(axis=1)
         cate_df[self.outcome] = self.CATE_df['outcome'].mean(axis=1)
         cate_df[self.treatment] = self.CATE_df['treatment'].mean(axis=1)
         cate_df['avg.Diameter'] = self.CATE_df['diameter'].mean(axis=1)
+        
+        LOWER_ALPHA = 0.05
+        UPPER_ALPHA = 0.95
+        # Each model has to be separate
+        lower_model = ensemble.GradientBoostingRegressor(loss='quantile',alpha=LOWER_ALPHA)
+        # The mid model will use the default loss
+        mid_model = ensemble.GradientBoostingRegressor(loss="ls")
+        upper_model = ensemble.GradientBoostingRegressor(loss="quantile",alpha=UPPER_ALPHA)
+        lower_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        mid_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        upper_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        
+        cate_df['std.gbr.CATE'] = np.abs(upper_model.predict(data[self.continuous+self.discrete]) - lower_model.predict(data[self.continuous+self.discrete]))/4
+        cate_df['avg.gbr.CATE'] = mid_model.predict(data[self.continuous+self.discrete])
+        
+        kernel = 1.0 * RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e3)) + WhiteKernel(noise_level=0.1, noise_level_bounds=(1e-10, np.std(cate_df['avg.CATE'])))
+        gaussian_model = gp.GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=100,normalize_y=True)
+        gaussian_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        gp_pred = gaussian_model.predict(data[self.continuous+self.discrete], return_std=True)
+        cate_df['std.gp.CATE'] = gp_pred[1]
+        cate_df['avg.gp.CATE'] = gp_pred[0]
+        
+        bayes_ridge = lm.BayesianRidge(fit_intercept=True)
+        bayes_ridge.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        br_pred = bayes_ridge.predict(data[self.continuous+self.discrete], return_std=True)
+        cate_df['std.br.CATE'] = br_pred[1]
+        cate_df['avg.br.CATE'] = br_pred[0]
+        
+        if smooth_cate:
+            cate_df['avg.CATE'] = cate_df['avg.gbr.CATE']
+        cate_df['std.CATE'] = cate_df['std.gbr.CATE']
+        
         self.CATE_df = cate_df

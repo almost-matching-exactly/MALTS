@@ -11,16 +11,21 @@ import scipy.optimize as opt
 import pandas as pd
 import sklearn.linear_model as lm
 import sklearn.ensemble as ensemble
+import sklearn.gaussian_process as gp
+from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import RepeatedStratifiedKFold
+import warnings
+warnings.filterwarnings("ignore")
 
 class malts:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10):
-        np.random.seed(0)
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10,reweight=False):
+        # np.random.seed(0)
         self.C = C #coefficient to regularozation term
         self.k = k
+        self.reweight = reweight
         self.n, self.p = data.shape
         self.p = self.p - 2 #shape of the data
         self.outcome = outcome
@@ -89,7 +94,10 @@ class malts:
         self.W_C = self.calcW_C(Mc,Md)
         self.delta_T = np.sum((self.Y_T - (np.matmul(self.W_T,self.Y_T) - np.diag(self.W_T)*self.Y_T))**2)
         self.delta_C = np.sum((self.Y_C - (np.matmul(self.W_C,self.Y_C) - np.diag(self.W_C)*self.Y_C))**2)
-        return self.delta_T + self.delta_C
+        if self.reweight == False:
+            return self.delta_T + self.delta_C
+        elif self.reweight == True:
+            return (len(self.Y_T)+len(self.Y_C))*(self.delta_T/len(self.Y_T) + self.delta_C/len(self.Y_C))
     
     def objective(self,M):
         Mc = M[:len(self.continuous)]
@@ -101,12 +109,13 @@ class malts:
         return delta + reg + cons1 + cons2
         
     def fit(self,method='COBYLA'):
-        np.random.seed(0)
+        # np.random.seed(0)
         M_init = np.ones((self.p,))
         res = opt.minimize( self.objective, x0=M_init,method=method )
         self.M = res.x
         self.Mc = self.M[:len(self.continuous)]
         self.Md = self.M[len(self.continuous):]
+        self.M_opt = pd.DataFrame(self.M.reshape(1,-1),columns=self.continuous+self.discrete,index=['Diag'])
         return res
     
     def get_matched_groups(self, df_estimation, k=10 ):
@@ -144,19 +153,21 @@ class malts:
         for i in range(Y.shape[0]):
             #finding k closest control units to unit i
             idx = np.argpartition(D_C[i,:],k)
-            matched_df_C = pd.DataFrame( np.hstack( (Xc_C[idx[:k],:], Xd_C[idx[:k],:].reshape((k,len(self.discrete))), Y_C[idx[:k]].reshape(-1,1), D_C[i,idx[:k]].reshape(-1,1), np.zeros((k,1)) ) ), index=['control-%d'%(j) for j in range(k)], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
+            matched_df_C = pd.DataFrame( np.hstack( (Xc_C[idx[:k],:], Xd_C[idx[:k],:].reshape((k,len(self.discrete))), Y_C[idx[:k]].reshape(-1,1), D_C[i,idx[:k]].reshape(-1,1), np.zeros((k,1)) ) ), index=df_C.index[idx[:k]], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
             #finding k closest treated units to unit i
             idx = np.argpartition(D_T[i,:],k)
-            matched_df_T = pd.DataFrame( np.hstack( (Xc_T[idx[:k],:], Xd_T[idx[:k],:].reshape((k,len(self.discrete))), Y_T[idx[:k]].reshape(-1,1), D_T[i,idx[:k]].reshape(-1,1), np.ones((k,1)) ) ), index=['treated-%d'%(j) for j in range(k)], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
+            matched_df_T = pd.DataFrame( np.hstack( (Xc_T[idx[:k],:], Xd_T[idx[:k],:].reshape((k,len(self.discrete))), Y_T[idx[:k]].reshape(-1,1), D_T[i,idx[:k]].reshape(-1,1), np.ones((k,1)) ) ), index=df_T.index[idx[:k]], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
             matched_df = pd.DataFrame(np.hstack((Xc[i], Xd[i], Y[i], 0, T[i])).reshape(1,-1), index=['query'], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment])
             matched_df = matched_df.append(matched_df_T.append(matched_df_C))
             MG[index[i]] = matched_df
             #{'unit':[ Xc[i], Xd[i], Y[i], T[i] ] ,'control':[ matched_Xc_C, matched_Xd_C, matched_Y_C, d_array_C],'treated':[matched_Xc_T, matched_Xd_T, matched_Y_T, d_array_T ]}
-        return MG
+        MG_df = pd.concat(MG)
+        return MG_df
     
     def CATE(self,MG,outcome_discrete=False,model='linear'):
         cate = {}
-        for k,v in MG.items():
+        for k in pd.unique(MG.index.get_level_values(0)):
+            v = MG.loc[k]
             #control
             matched_X_C = v.loc[v[self.treatment]==0].drop(index='query',errors='ignore')[self.continuous+self.discrete]
             matched_Y_C = v.loc[v[self.treatment]==0].drop(index='query',errors='ignore')[self.outcome]
@@ -164,25 +175,35 @@ class malts:
             matched_X_T = v.loc[v[self.treatment]==1].drop(index='query',errors='ignore')[self.continuous+self.discrete]
             matched_Y_T = v.loc[v[self.treatment]==1].drop(index='query',errors='ignore')[self.outcome]
             x = v.loc['query'][self.continuous+self.discrete].to_numpy().reshape(1,-1)
+            
+            vc = v[self.continuous].to_numpy()
+            vd = v[self.discrete].to_numpy()
+            dvc = np.ones((vc.shape[0],vc.shape[1],vc.shape[0])) * vc.T
+            dist_cont = np.sum( ( (dvc - dvc.T) * (self.Mc.reshape(-1,1)) )**2, axis=1) 
+            dvd = np.ones((vd.shape[0],vd.shape[1],vd.shape[0])) * vd.T
+            dist_dis = np.sum( ( (dvd - dvd.T) * (self.Md.reshape(-1,1)) )**2, axis=1) 
+            dist_mat = dist_cont + dist_dis
+            diameter = np.max(dist_mat)
+            
             if not outcome_discrete:
                 if model=='mean':
                     yt = np.mean(matched_Y_T)
                     yc = np.mean(matched_Y_C)
-                    cate[k] = {'CATE': yt - yc,'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment] }
+                    cate[k] = {'CATE': yt - yc,'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
                 if model=='linear':
                     yc = lm.Ridge().fit( X = matched_X_C, y = matched_Y_C )
                     yt = lm.Ridge().fit( X = matched_X_T, y = matched_Y_T )
-                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment] }
+                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
                 if model=='RF':
                     yc = ensemble.RandomForestRegressor().fit( X = matched_X_C, y = matched_Y_C )
                     yt = ensemble.RandomForestRegressor().fit( X = matched_X_T, y = matched_Y_T )
-                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment] }
+                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
         return pd.DataFrame.from_dict(cate,orient='index')
     
     def visualizeMG(self,MG,a):
-        MGi = MG[a]
+        MGi = MG.loc[a]
         k = int( (MGi.shape[0] - 1 )/2 )
-        df = MGi[self.continuous+self.discrete+[self.treatment]]
+        df = MGi[self.continuous+self.discrete].drop(index='query')
         
         df.index.names = ['Unit']
         df.columns.names = ['Covariate']
@@ -191,13 +212,13 @@ class malts:
         T = np.array([0 for i in range(0,k*self.p)] + [1 for i in range(0,k*self.p)])
         tidy[self.treatment] = T
         
-        y0 = np.ones((self.p,k)) * MGi['control'][2]
+        y0 = np.ones((self.p,k)) * MGi.loc[MGi[self.treatment]==0][self.outcome].drop(index='query',errors='ignore').to_numpy()
         y0 = y0.flatten('F')
-        y1 = np.ones((self.p,k)) * MGi['treated'][2]
+        y1 = np.ones((self.p,k)) * MGi.loc[MGi[self.treatment]==1][self.outcome].drop(index='query',errors='ignore').to_numpy()
         y1 = y0.flatten('F')
         tidy[self.outcome] = np.hstack( (y0,y1) )
         fig = plt.figure()
-        sns.lmplot(sharey=False,sharex=False,x='Covariate Value',y='outcome',hue='treated',col='Covariate', data=tidy, col_wrap=3, height=4)
+        sns.lmplot(sharey=False,sharex=False,x='Covariate Value',y=self.outcome,hue=self.treatment, col='Covariate', data=tidy, col_wrap=3, height=4)
         fig.savefig('matched_group_%d.png'%(a))
         
         fig = plt.figure(figsize=(15,20))
@@ -222,33 +243,82 @@ class malts:
         X = np.array(X)
         plt.scatter(X[:,0],X[:,1])
         fig.savefig('marginal_%d_%d_matched_groups.png')
-        return X
-        
+        return X      
             
         
 class malts_mf:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,k=10,n_splits=5):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',smooth_cate=True,reweight=False,n_splits=5,n_repeats=1):
         self.n_splits = n_splits
         self.C = C
-        self.k = k
+        self.k_tr = k_tr
+        self.k_est = k_est
         self.outcome = outcome
         self.treatment = treatment
         self.discrete = discrete
-        skf = StratifiedKFold(n_splits=n_splits)
+        self.continuous = list(set(data.columns).difference(set([outcome]+[treatment]+discrete)))
+        self.reweight = reweight
+        
+        skf = RepeatedStratifiedKFold(n_splits=n_splits,n_repeats=n_repeats,random_state=0)
         gen_skf = skf.split(data,data[treatment])
         self.M_opt_list = []
         self.MG_list = []
         self.CATE_df = pd.DataFrame()
+        N = np.zeros((data.shape[0],data.shape[0]))
+        self.MG_matrix = pd.DataFrame(N, columns=data.index, index=data.index)
+        
         i = 0
         for est_idx, train_idx in gen_skf:
             df_train = data.iloc[train_idx]
             df_est = data.iloc[est_idx]
-            m = malts( outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k )
+            m = malts( outcome, treatment, data=df_train, discrete=discrete, C=self.C, k=self.k_tr, reweight=self.reweight )
             m.fit()
-            self.M_opt_list.append(m.M)
-            mg = m.get_matched_groups(df_est,50)
+            self.M_opt_list.append(m.M_opt)
+            mg = m.get_matched_groups(df_est,k_est)
             self.MG_list.append(mg)
-            m.CATE(mg).rename(columns={'CATE':'CATE-%d'%(i),'outcome':'outcome-%d'%(i),'treatment':'treatment-%d'%(i)})
-            self.CATE_df = pd.concat([self.CATE_df, m.CATE(mg)], join='outer', axis=1)
+            self.CATE_df = pd.concat([self.CATE_df, m.CATE(mg,model=estimator)], join='outer', axis=1)
         
+        for i in range(n_splits*n_repeats):
+            mg_i = self.MG_list[i]
+            for a in mg_i.index:
+                if a[1]!='query':
+                    self.MG_matrix.loc[a[0],a[1]] = self.MG_matrix.loc[a[0],a[1]]+1
         
+        cate_df = self.CATE_df['CATE']
+        cate_df['avg.CATE'] = cate_df.mean(axis=1)
+        cate_df['std.CATE'] = cate_df.std(axis=1)
+        cate_df[self.outcome] = self.CATE_df['outcome'].mean(axis=1)
+        cate_df[self.treatment] = self.CATE_df['treatment'].mean(axis=1)
+        cate_df['avg.Diameter'] = self.CATE_df['diameter'].mean(axis=1)
+        
+        LOWER_ALPHA = 0.05
+        UPPER_ALPHA = 0.95
+        # Each model has to be separate
+        lower_model = ensemble.GradientBoostingRegressor(loss='quantile',alpha=LOWER_ALPHA)
+        # The mid model will use the default loss
+        mid_model = ensemble.GradientBoostingRegressor(loss="ls")
+        upper_model = ensemble.GradientBoostingRegressor(loss="quantile",alpha=UPPER_ALPHA)
+        lower_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        mid_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        upper_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        
+        cate_df['std.gbr.CATE'] = np.abs(upper_model.predict(data[self.continuous+self.discrete]) - lower_model.predict(data[self.continuous+self.discrete]))/4
+        cate_df['avg.gbr.CATE'] = mid_model.predict(data[self.continuous+self.discrete])
+        
+        kernel = 1.0 * RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e3)) + WhiteKernel(noise_level=0.1, noise_level_bounds=(1e-10, np.std(cate_df['avg.CATE'])))
+        gaussian_model = gp.GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=100,normalize_y=True)
+        gaussian_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        gp_pred = gaussian_model.predict(data[self.continuous+self.discrete], return_std=True)
+        cate_df['std.gp.CATE'] = gp_pred[1]
+        cate_df['avg.gp.CATE'] = gp_pred[0]
+        
+        bayes_ridge = lm.BayesianRidge(fit_intercept=True)
+        bayes_ridge.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+        br_pred = bayes_ridge.predict(data[self.continuous+self.discrete], return_std=True)
+        cate_df['std.br.CATE'] = br_pred[1]
+        cate_df['avg.br.CATE'] = br_pred[0]
+        
+        if smooth_cate:
+            cate_df['avg.CATE'] = cate_df['avg.gbr.CATE']
+        cate_df['std.CATE'] = cate_df['std.gbr.CATE']
+        
+        self.CATE_df = cate_df
