@@ -677,19 +677,19 @@ plt.text(ATE-4,0.04,'$\hat{ATE}$',rotation=90)
 
 ## MALTS Arguments
 
-1. outcome: Name of the outcome variable column in the data
-2. treatment: Name of the treatment variable column in the data
-3. data: Data in the pandas Dataframe format
-4. discrete: List of column names which are discrete (dummified); Default=[]
-5. C: Regularization constant; Default=1
-6. k_tr: Size of matched group in training step; Default=15
-7. k_est: Size of matched group in estimation step; Default=50
-8. estimator: CATE estimator inside a matched group; Default='linear'; Options: 'linear','mean' or 'RF'
-9. smooth_cate: Boolean to smoothen CATE estimates by fitting a regression model; Default=True
-10. reweight: Reweight treated and control groups as per their respective sample sizes in training step; Default=False,
-11. n_splits: Number of splits of the data for n_split-fold procedure; Default=5
-12. n_repeats: Number of repeats of the whole procedure; Default=1
-13. output_format: Output format of CATE dataframe; Default='brief'; Options: 'brief' or 'full'
+1. **outcome**: 	Name of the outcome variable column in the data
+2. **treatment**: 	Name of the treatment variable column in the data
+3. **data**: 			Data in the pandas Dataframe format
+4. **discrete**: 		List of column names which are discrete (dummified); Default=[]
+5. **C**: 				Regularization constant; Default=1
+6. **k_tr**: 			Size of matched group in training step; Default=15
+7. **k_est**: 			Size of matched group in estimation step; Default=50
+8. **estimator**: 		CATE estimator inside a matched group; Default='linear'; Options: 'linear','mean' or 'RF'
+9. **smooth_cate**: 	Boolean to smoothen CATE estimates by fitting a regression model; Default=True
+10. **reweight**: 		Reweight treated and control groups as per their respective sample sizes in training step; Default=False,
+11. **n_splits**: 		Number of splits of the data for n_split-fold procedure; Default=5
+12. **n_repeats**: 		Number of repeats of the whole procedure; Default=1
+13. **output_format**: 	Output format of CATE dataframe; Default='brief'; Options: 'brief' or 'full'
 
 # Visualization
 
