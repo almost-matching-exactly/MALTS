@@ -6,6 +6,13 @@ PyMALTS is a learning-to-matching interpretable causal inference method. PyMALTS
 
 PyMALTS is a Python3 library and it requires Numpy, Pandas, Scipy, Scikit-Learn, Matplotlib and Seaborn.
 
+### Installation
+
+```python
+pip install pymalts
+```
+
+### Importing
 
 ```python
 import pymalts
