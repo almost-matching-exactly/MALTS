@@ -517,14 +517,7 @@ sns.heatmap(m.MG_matrix)
 ```
 
 
-
-
-    <matplotlib.axes._subplots.AxesSubplot at 0x24d487d3348>
-
-
-
-
-![png](output_15_1.png)
+![png](example/output_15_1.png)
 
 
 Accessing the matched group for an example unit with index equal to "1" and visualizing the weights as bar-chart
@@ -536,14 +529,7 @@ MG1[MG1>1].sort_values(ascending=False).plot(kind='bar',figsize=(20,5)) #Visuali
 ```
 
 
-
-
-    <matplotlib.axes._subplots.AxesSubplot at 0x24d5af78908>
-
-
-
-
-![png](output_17_1.png)
+![png](example/output_17_1.png)
 
 
 ## ATE and CATE Estimates
@@ -686,7 +672,7 @@ plt.text(ATE-4,0.04,'$\hat{ATE}$',rotation=90)
 
 
 
-![png](output_23_1.png)
+![png](example/output_23_1.png)
 
 
 ## MALTS Arguments
@@ -730,7 +716,7 @@ plt.title('Matched Group for Unit-0') #setting title of the plot
 
 
 
-![png](output_29_1.png)
+![png](example/output_29_1.png)
 
 
 ## Plotting CATE versus covariate
@@ -747,10 +733,6 @@ sns.regplot( x='X1', y='avg.CATE', data=data_w_cate, scatter_kws={'alpha':0.5,'s
 
 
 
-    <matplotlib.axes._subplots.AxesSubplot at 0x24d613558c8>
 
-
-
-
-![png](output_32_1.png)
+![png](example/output_32_1.png)
 
