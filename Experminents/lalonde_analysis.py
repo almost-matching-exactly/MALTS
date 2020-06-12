@@ -34,6 +34,8 @@ psid_control3 = psid_control3.drop(columns=['data_id','re74'],errors='ignore')
 
 data = nsw.append(psid_control2,ignore_index=True)
 
+overlap = lambda data: np.sqrt(np.matmul(np.matmul((data.loc[data['treat']==1].drop(columns=['treat']).mean(axis=0) - data.loc[data['treat']==0].drop(columns=['treat']).mean(axis=0)).T,np.linalg.inv(data.drop(columns=['treat']).cov())),(data.loc[data['treat']==1].drop(columns=['treat']).mean(axis=0) - data.loc[data['treat']==0].drop(columns=['treat']).mean(axis=0))))
+'''
 #Matching on NSW Male Subset of Lalonde's Data
 np.random.seed(0)
 m_nsw = pymalts.malts_mf('re78', 'treat', data=nsw,
@@ -55,35 +57,38 @@ e_bias = (np.mean(cate_df_nsw['avg.CATE']) - 886)*100/886
 df_nsw_result = pd.DataFrame([['MALTS',np.mean(cate_df_nsw['avg.CATE']),e_bias]],
                              columns=['Method','ATE Estimate','Estimation Bias (%)'])
 
-
+'''
 #Matching on NSW+PSID Male Subset of Lalonde's Data
 np.random.seed(0)
 m = pymalts.malts_mf('re78', 'treat', data=data,
                      discrete=['black','hispanic','married','nodegree'],
-                     k_est=150,n_splits=5)
+                     k_est=15,n_splits=4,n_repeats=50,estimator='linear')
 
 df_full = m.CATE_df
 cate_df = m.CATE_df['CATE']
 cate_df['avg.CATE'] = cate_df.mean(axis=1)
-cate_df['avg.Diam'] = df_full['diameter'].mean(axis=1)
+cate_df['avg.Diam'] = df_full['avg.Diameter']
 cate_df['std.CATE'] = cate_df.std(axis=1)
-cate_df['re78'] = m.CATE_df['outcome'].mean(axis=1)
-cate_df['treat'] = m.CATE_df['treatment'].mean(axis=1)
+cate_df['re78'] = m.CATE_df['re78']
+cate_df['treat'] = m.CATE_df['treat']
 
 np.random.seed(0)
 clust = cluster.KMeans(n_clusters=3).fit(cate_df['avg.Diam'].to_numpy().reshape(-1,1))
 
 fig = plt.figure()
-sns.scatterplot(y=cate_df['avg.CATE'],x=cate_df['avg.Diam'],hue=clust.labels_,alpha=0.6,palette='Set1')
-plt.axvline(8.5e7)
-plt.xscale('log')
+sns.scatterplot(y=cate_df['avg.CATE'],x=cate_df['avg.Diam'],
+                hue=cate_df['treat'],#clust.labels_,
+                alpha=0.6,palette='Set1')
+plt.axvline(1600000)
+plt.xscale('linear')
 plt.tight_layout()
-fig.savefig('lalonde_pruning.png')
+fig.savefig('lalonde_pruning_50.png')
 
 print(np.mean(cate_df['avg.CATE']))
-print(cate_df.loc[cate_df['avg.Diam']<8.5e7]['avg.CATE'].mean())
+print(cate_df.loc[cate_df['avg.Diam']<100000000]['avg.CATE'].mean())
 print(cate_df.loc[cate_df['treat']==1]['avg.CATE'].mean())
 
+'''
 m_opt_list = pd.concat(m.M_opt_list)
 ate_df = np.mean(cate_df,axis=0)
 ate_df = ate_df.rename({'CATE':'ATE','avg.CATE':'avg.ATE'}).drop(['std.CATE'])
@@ -189,3 +194,4 @@ df_result = df_result.rename({'MALTS-Pruned':'MALTS'})
 
 df_nsw_result.to_latex('lalonde_NSW.tex')
 df_result.to_latex('lalonde_PSID2.tex')
+'''
