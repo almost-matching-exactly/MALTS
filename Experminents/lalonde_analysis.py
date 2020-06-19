@@ -12,6 +12,7 @@ import pymalts
 import matplotlib.pyplot as plt
 import seaborn as sns
 import sklearn.cluster as cluster
+sns.set()
 
 import matchit
 import bart
@@ -61,8 +62,8 @@ df_nsw_result = pd.DataFrame([['MALTS',np.mean(cate_df_nsw['avg.CATE']),e_bias]]
 #Matching on NSW+PSID Male Subset of Lalonde's Data
 np.random.seed(0)
 m = pymalts.malts_mf('re78', 'treat', data=data,
-                     discrete=['black','hispanic','married','nodegree'],
-                     k_est=15,n_splits=4,n_repeats=50,estimator='linear')
+                      discrete=['black','hispanic','married','nodegree'],
+                      k_est=15,n_splits=4,n_repeats=1,estimator='linear')
 
 df_full = m.CATE_df
 cate_df = m.CATE_df['CATE']
@@ -82,7 +83,7 @@ sns.scatterplot(y=cate_df['avg.CATE'],x=cate_df['avg.Diam'],
 plt.axvline(1600000)
 plt.xscale('linear')
 plt.tight_layout()
-fig.savefig('lalonde_pruning_50.png')
+fig.savefig('lalonde_pruning_1.png')
 
 print(np.mean(cate_df['avg.CATE']))
 print(cate_df.loc[cate_df['avg.Diam']<100000000]['avg.CATE'].mean())
