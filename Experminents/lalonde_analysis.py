@@ -59,11 +59,12 @@ df_nsw_result = pd.DataFrame([['MALTS',np.mean(cate_df_nsw['avg.CATE']),e_bias]]
                              columns=['Method','ATE Estimate','Estimation Bias (%)'])
 
 '''
+'''
 #Matching on NSW+PSID Male Subset of Lalonde's Data
 np.random.seed(0)
 m = pymalts.malts_mf('re78', 'treat', data=data,
                       discrete=['black','hispanic','married','nodegree'],
-                      k_est=15,n_splits=4,n_repeats=1,estimator='linear')
+                      k_est=15, n_splits=2, n_repeats=50, estimator='linear')
 
 df_full = m.CATE_df
 cate_df = m.CATE_df['CATE']
@@ -88,6 +89,8 @@ fig.savefig('lalonde_pruning_1.png')
 print(np.mean(cate_df['avg.CATE']))
 print(cate_df.loc[cate_df['avg.Diam']<100000000]['avg.CATE'].mean())
 print(cate_df.loc[cate_df['treat']==1]['avg.CATE'].mean())
+
+'''
 
 '''
 m_opt_list = pd.concat(m.M_opt_list)
@@ -152,41 +155,41 @@ df_nsw_result = df_nsw_result.append(pd.DataFrame( [['Prognostic Score',ate[0],e
 df_result = df_result.append(pd.DataFrame( [['Prognostic Score',ate[1],e_bias[1]]],
                                           columns=['Method','ATE Estimate','Estimation Bias (%)']))
 
-
+'''
 ##BART
 np.random.seed(0)
 cate_est_nsw = bart.bart('re78','treat',nsw,5)
-cate_est = bart.bart('re78','treat',data,5)
+cate_est, bart_res_c, bart_res_t = bart.bart('re78','treat',data,5,result='full')
 ate_est_nsw = cate_est_nsw.mean(axis=0).mean()
 ate_est = cate_est.mean(axis=0).mean()
 
 ate = np.array([ate_est_nsw,ate_est])
 e_bias = (ate - 886)*100/886
 
-df_nsw_result = df_nsw_result.append(pd.DataFrame( [['BART-CV',ate[0],e_bias[0]]],
-                                          columns=['Method','ATE Estimate','Estimation Bias (%)']))
+# df_nsw_result = df_nsw_result.append(pd.DataFrame( [['BART-CV',ate[0],e_bias[0]]],
+#                                           columns=['Method','ATE Estimate','Estimation Bias (%)']))
 
-df_result = df_result.append(pd.DataFrame( [['BART-CV',ate[1],e_bias[1]]],
-                                          columns=['Method','ATE Estimate','Estimation Bias (%)']))
+# df_result = df_result.append(pd.DataFrame( [['BART-CV',ate[1],e_bias[1]]],
+#                                           columns=['Method','ATE Estimate','Estimation Bias (%)']))
 
 
 ##Causal Forest
 np.random.seed(0)
 cate_est_nsw = causalforest.causalforest('re78','treat',nsw,5)
-cate_est = causalforest.causalforest('re78','treat',data,5)
+cate_est, crf = causalforest.causalforest('re78','treat',data,5,result='full')
 ate_est_nsw = cate_est_nsw.mean(axis=0).mean()
 ate_est = cate_est.mean(axis=0).mean()
 
 ate = np.array([ate_est_nsw,ate_est])
 e_bias = (ate - 886)*100/886
 
-df_nsw_result = df_nsw_result.append(pd.DataFrame( [['Causal Forest-CV',ate[0],e_bias[0]]],
-                                          columns=['Method','ATE Estimate','Estimation Bias (%)']))
+# df_nsw_result = df_nsw_result.append(pd.DataFrame( [['Causal Forest-CV',ate[0],e_bias[0]]],
+#                                           columns=['Method','ATE Estimate','Estimation Bias (%)']))
 
-df_result = df_result.append(pd.DataFrame( [['Causal Forest-CV',ate[1],e_bias[1]]],
-                                          columns=['Method','ATE Estimate','Estimation Bias (%)']))
+# df_result = df_result.append(pd.DataFrame( [['Causal Forest-CV',ate[1],e_bias[1]]],
+#                                           columns=['Method','ATE Estimate','Estimation Bias (%)']))
 
-
+'''
 df_nsw_result = df_nsw_result.set_index('Method')
 df_result = df_result.set_index('Method')
 
@@ -196,3 +199,6 @@ df_result = df_result.rename({'MALTS-Pruned':'MALTS'})
 df_nsw_result.to_latex('lalonde_NSW.tex')
 df_result.to_latex('lalonde_PSID2.tex')
 '''
+
+pd.concat(m.M_opt_list).plot(kind='box',legend=False,figsize=(8,5),fontsize=14)
+plt.ylabel('Distance Metric Stretch',fontsize=14)

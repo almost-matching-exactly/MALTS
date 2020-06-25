@@ -25,7 +25,7 @@ base = importr('base')
 
 grf = importr('grf')
 
-def causalforest(outcome,treatment,data,n_splits=5):
+def causalforest(outcome,treatment,data,n_splits=5,result='brief'):
     skf = StratifiedKFold(n_splits=n_splits)
     gen_skf = skf.split(data,data[treatment])
     cate_est = pd.DataFrame()
@@ -47,5 +47,7 @@ def causalforest(outcome,treatment,data,n_splits=5):
     
     cate_est['avg.CATE'] = cate_est.mean(axis=1)
     cate_est['std.CATE'] = cate_est.std(axis=1)
+    if result=='full':
+        return cate_est, crf
     return cate_est
         

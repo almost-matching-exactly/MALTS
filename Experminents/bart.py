@@ -24,7 +24,7 @@ pandas2ri.activate()
 utils = importr('utils')
 dbarts = importr('dbarts')
 
-def bart(outcome,treatment,data,n_splits):
+def bart(outcome,treatment,data,n_splits,result='brief'):
     skf = StratifiedKFold(n_splits=n_splits)
     gen_skf = skf.split(data,data[treatment])
     cate_est = pd.DataFrame()
@@ -50,4 +50,6 @@ def bart(outcome,treatment,data,n_splits):
         cate_est = pd.concat([cate_est, cate_est_i], join='outer', axis=1)
     cate_est['avg.CATE'] = cate_est.mean(axis=1)
     cate_est['std.CATE'] = cate_est.std(axis=1)
+    if result=='full':
+        return cate_est, bart_res_c, bart_res_t
     return cate_est
