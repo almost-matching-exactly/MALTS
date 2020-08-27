@@ -1,0 +1,14 @@
+Dear Editors,
+Please find our manuscript "MALTS: Matching after learning to stretch" for submission to JMLR. 
+
+Appropriate editors might include Maya Gupta, Edoardo Airoldi, and Russ Greiner.
+
+We need to let you know that we have a conflict of interest with editors Mehryar Mohri,David Sontag, and Joris Mooij. We also have a conflict with Nathan Kallus, who should not be chosen as a reviewer. Thank you!
+
+This paper is related to causal inference and machine learning. We hope to get reviewers who are more open-minded to a machine learning perspective than the classical causal inference reviewers. Thank you for considering our manuscript.
+
+This paper has not been published as a conference proceedings. This technique was used for the Atlantic Causal Inference data competition, and its application to the competition data was described in the following short note in the competition's description of results in Obervational Studies ("An Application of Matching After Learning To Stretch (MALTS)" by Parikh, Rudin, and Volfovsky (2019)).
+
+
+Sincerely,
+The authors

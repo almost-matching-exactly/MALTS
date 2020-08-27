@@ -14,10 +14,10 @@ import seaborn as sns
 import sklearn.cluster as cluster
 sns.set()
 
-import matchit
-import bart
-import causalforest
-import prognostic
+#import matchit
+#import bart
+#import causalforest
+#import prognostic
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -35,7 +35,9 @@ psid_control3 = psid_control3.drop(columns=['data_id','re74'],errors='ignore')
 
 data = nsw.append(psid_control2,ignore_index=True)
 
-overlap = lambda data: np.sqrt(np.matmul(np.matmul((data.loc[data['treat']==1].drop(columns=['treat']).mean(axis=0) - data.loc[data['treat']==0].drop(columns=['treat']).mean(axis=0)).T,np.linalg.inv(data.drop(columns=['treat']).cov())),(data.loc[data['treat']==1].drop(columns=['treat']).mean(axis=0) - data.loc[data['treat']==0].drop(columns=['treat']).mean(axis=0))))
+# overlap = lambda data: np.sqrt(np.matmul(np.matmul((data.loc[data['treat']==1].drop(columns=['treat']).mean(axis=0) - data.loc[data['treat']==0].drop(columns=['treat']).mean(axis=0)).T,np.linalg.inv(data.drop(columns=['treat']).cov())),(data.loc[data['treat']==1].drop(columns=['treat']).mean(axis=0) - data.loc[data['treat']==0].drop(columns=['treat']).mean(axis=0))))
+df_nsw_result = pd.DataFrame()
+
 '''
 #Matching on NSW Male Subset of Lalonde's Data
 np.random.seed(0)
@@ -59,6 +61,7 @@ df_nsw_result = pd.DataFrame([['MALTS',np.mean(cate_df_nsw['avg.CATE']),e_bias]]
                              columns=['Method','ATE Estimate','Estimation Bias (%)'])
 
 '''
+
 '''
 #Matching on NSW+PSID Male Subset of Lalonde's Data
 np.random.seed(0)
@@ -123,6 +126,7 @@ df_result = df_result.append(pd.DataFrame( [['GenMatch',ate[1],e_bias[1]]],
 
 
 
+
 ##PSNN
 np.random.seed(0)
 ate_nsw_psnn,_ = matchit.matchit('re78','treat',data=nsw,method='nearest',replace=True)
@@ -155,7 +159,7 @@ df_nsw_result = df_nsw_result.append(pd.DataFrame( [['Prognostic Score',ate[0],e
 df_result = df_result.append(pd.DataFrame( [['Prognostic Score',ate[1],e_bias[1]]],
                                           columns=['Method','ATE Estimate','Estimation Bias (%)']))
 
-'''
+
 ##BART
 np.random.seed(0)
 cate_est_nsw = bart.bart('re78','treat',nsw,5)
@@ -189,7 +193,6 @@ e_bias = (ate - 886)*100/886
 # df_result = df_result.append(pd.DataFrame( [['Causal Forest-CV',ate[1],e_bias[1]]],
 #                                           columns=['Method','ATE Estimate','Estimation Bias (%)']))
 
-'''
 df_nsw_result = df_nsw_result.set_index('Method')
 df_result = df_result.set_index('Method')
 
@@ -199,6 +202,3 @@ df_result = df_result.rename({'MALTS-Pruned':'MALTS'})
 df_nsw_result.to_latex('lalonde_NSW.tex')
 df_result.to_latex('lalonde_PSID2.tex')
 '''
-
-pd.concat(m.M_opt_list).plot(kind='box',legend=False,figsize=(8,5),fontsize=14)
-plt.ylabel('Distance Metric Stretch',fontsize=14)

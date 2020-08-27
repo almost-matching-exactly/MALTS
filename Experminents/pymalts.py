@@ -317,8 +317,20 @@ class malts_mf:
         cate_df['std.br.CATE'] = br_pred[1]
         cate_df['avg.br.CATE'] = br_pred[0]
         
+        cate_df['std.cons.CATE'] = self.conservative_var(data,self.MG_matrix)
+        
         if smooth_cate:
             cate_df['avg.CATE'] = cate_df['avg.gbr.CATE']
         cate_df['std.CATE'] = cate_df['std.gbr.CATE']
         
         self.CATE_df = cate_df
+        
+    def conservative_var(self,data,MG_matrix):
+        idxs = MG_matrix.index
+        std = pd.DataFrame(np.zeros(MG_matrix.shape[0],),index=idxs)
+        for idx in idxs:
+            MG1 = MG_matrix.loc[idx]
+            mg_units_T = data.loc[MG1[MG1>0].index].loc[data[self.treatment]==1][self.outcome]
+            mg_units_C = data.loc[MG1[MG1>0].index].loc[data[self.treatment]==0][self.outcome]
+            std.loc[idx] = np.sqrt(np.var(mg_units_T)+np.var(mg_units_C))
+        return std
