@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "\\name{malts}\n\\alias{malts}\n%- Also NEED an '\\alias' for EACH other topic documented here.\n\\title{\nMatching After Learning To Stretch\n}\n\\description{\n%%  ~~ A concise (1-5 lines) description of what the function does. ~~\n}\n\\usage{\nmalts(x)\n}\n%- maybe also 'usage' for other objects documented here.\n\\arguments{\n  \\item{x}{\n%%     ~~Describe \\code{x} here~~\n}\n}\n\\details{\n%%  ~~ If necessary, more details than the description above ~~\n}\n\\value{\n%%  ~Describe the value returned\n%%  If it is a LIST, use\n%%  \\item{comp1 }{Description of 'comp1'}\n%%  \\item{comp2 }{Description of 'comp2'}\n%% ...\n}\n\\references{\n%% ~put references to the literature/web site here ~\n}\n\\author{\n%%  ~~who you are~~\n}\n\\note{\n%%  ~~further notes~~\n}\n\n%% ~Make other sections like Warning with \\section{Warning }{....} ~\n\n\\seealso{\n%% ~~objects to See Also as \\code{\\link{help}}, ~~~\n}\n\\examples{\n##---- Should be DIRECTLY executable !! ----\n##-- ==>  Define data, use random,\n##--\tor do  help(data=index)  for the standard data sets.\n\n## The function is currently defined as\nfunction (x)\n{\n  }\n}\n% Add one or more standard keywords, see file 'KEYWORDS' in the\n% R documentation directory.\n\\keyword{ ~kwd1 }% use one of  RShowDoc(\"KEYWORDS\")\n\\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line\n",
+    "created" : 1581114286025.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3732778806",
+    "id" : "1D63970",
+    "lastKnownWriteTime" : 1581114345,
+    "last_content_update" : 1581114345320,
+    "path" : "~/Desktop/Harsh/RMALTS/man/malts.Rd",
+    "project_path" : "man/malts.Rd",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_doc"
+}
