@@ -53,7 +53,7 @@ cate_df['err.CATE'] = np.abs(cate_df['avg.CATE']-cate_df['true.CATE'])
 # sns.regplot(x='std.CATE',y='err.CATE',data=cate_df)
 # sns.scatterplot(x='true.CATE',y='avg.CATE',size='std.CATE',data=cate_df)
 
-'''
+
 m = pymalts.malts('Y','T',data=df_train, discrete=[], C=5,k=10)
 res = m.fit()
 print(res.x)
@@ -257,4 +257,3 @@ plt.tight_layout()
 fig.savefig('Figures/violin_multifold_malts.png')
 
 err.to_csv('Logs/CATE_Multifold_Est_Error_File.csv')
-'''

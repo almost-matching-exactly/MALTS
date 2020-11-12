@@ -247,7 +247,7 @@ class malts:
             
         
 class malts_mf:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',smooth_cate=True,reweight=False,n_splits=5,n_repeats=1):
+    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',smooth_cate=True,reweight=False,n_splits=5,n_repeats=1,output_format='brief'):
         self.n_splits = n_splits
         self.C = C
         self.k_tr = k_tr
@@ -297,40 +297,35 @@ class malts_mf:
         # The mid model will use the default loss
         mid_model = ensemble.GradientBoostingRegressor(loss="ls")
         upper_model = ensemble.GradientBoostingRegressor(loss="quantile",alpha=UPPER_ALPHA)
-        lower_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
-        mid_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
-        upper_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
         
-        cate_df['std.gbr.CATE'] = np.abs(upper_model.predict(data[self.continuous+self.discrete]) - lower_model.predict(data[self.continuous+self.discrete]))/4
-        cate_df['avg.gbr.CATE'] = mid_model.predict(data[self.continuous+self.discrete])
-        
-        kernel = 1.0 * RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e3)) + WhiteKernel(noise_level=0.1, noise_level_bounds=(1e-10, np.std(cate_df['avg.CATE'])))
-        gaussian_model = gp.GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=100,normalize_y=True)
-        gaussian_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
-        gp_pred = gaussian_model.predict(data[self.continuous+self.discrete], return_std=True)
-        cate_df['std.gp.CATE'] = gp_pred[1]
-        cate_df['avg.gp.CATE'] = gp_pred[0]
-        
-        bayes_ridge = lm.BayesianRidge(fit_intercept=True)
-        bayes_ridge.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
-        br_pred = bayes_ridge.predict(data[self.continuous+self.discrete], return_std=True)
-        cate_df['std.br.CATE'] = br_pred[1]
-        cate_df['avg.br.CATE'] = br_pred[0]
-        
-        cate_df['std.cons.CATE'] = self.conservative_var(data,self.MG_matrix)
-        
-        if smooth_cate:
-            cate_df['avg.CATE'] = cate_df['avg.gbr.CATE']
-        cate_df['std.CATE'] = cate_df['std.gbr.CATE']
-        
-        self.CATE_df = cate_df
-        
-    def conservative_var(self,data,MG_matrix):
-        idxs = MG_matrix.index
-        std = pd.DataFrame(np.zeros(MG_matrix.shape[0],),index=idxs)
-        for idx in idxs:
-            MG1 = MG_matrix.loc[idx]
-            mg_units_T = data.loc[MG1[MG1>0].index].loc[data[self.treatment]==1][self.outcome]
-            mg_units_C = data.loc[MG1[MG1>0].index].loc[data[self.treatment]==0][self.outcome]
-            std.loc[idx] = np.sqrt(np.var(mg_units_T)+np.var(mg_units_C))
-        return std
+        try:
+            lower_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+            mid_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+            upper_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+            
+            cate_df['std.gbr.CATE'] = np.abs(upper_model.predict(data[self.continuous+self.discrete]) - lower_model.predict(data[self.continuous+self.discrete]))/4
+            cate_df['avg.gbr.CATE'] = mid_model.predict(data[self.continuous+self.discrete])
+            
+            # kernel = 1.0 * RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e3)) + WhiteKernel(noise_level=0.1, noise_level_bounds=(1e-10, np.std(cate_df['avg.CATE'])))
+            # gaussian_model = gp.GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=100,normalize_y=True)
+            # gaussian_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+            # gp_pred = gaussian_model.predict(data[self.continuous+self.discrete], return_std=True)
+            # cate_df['std.gp.CATE'] = gp_pred[1]
+            # cate_df['avg.gp.CATE'] = gp_pred[0]
+            
+            # bayes_ridge = lm.BayesianRidge(fit_intercept=True)
+            # bayes_ridge.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+            # br_pred = bayes_ridge.predict(data[self.continuous+self.discrete], return_std=True)
+            # cate_df['std.br.CATE'] = br_pred[1]
+            # cate_df['avg.br.CATE'] = br_pred[0]
+            
+            if smooth_cate:
+                cate_df['avg.CATE'] = cate_df['avg.gbr.CATE']
+            cate_df['std.CATE'] = cate_df['std.gbr.CATE']
+            
+            if output_format=='brief':
+                self.CATE_df = cate_df[['avg.CATE','std.CATE',outcome,treatment]]
+            if output_format=='full':
+                self.CATE_df = cate_df
+        except:
+            self.CATE_df = cate_df
