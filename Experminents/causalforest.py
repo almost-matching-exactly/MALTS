@@ -40,7 +40,8 @@ def causalforest(outcome,treatment,data,n_splits=5,result='brief'):
         
         crf = grf.causal_forest(X,Ycrf,Tcrf)
         tauhat = grf.predict_causal_forest(crf,Xtest)
-        t_hat_crf = np.array(tauhat[0])
+        # t_hat_crf = np.array(tauhat[0])
+        t_hat_crf = np.array(tauhat['predictions'])
         
         cate_est_i = pd.DataFrame(t_hat_crf, index=df_est.index, columns=['CATE'])
         cate_est = pd.concat([cate_est, cate_est_i], join='outer', axis=1)

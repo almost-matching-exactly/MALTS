@@ -34,12 +34,16 @@ def matchit(outcome, treatment, data, method='nearest',replace=False):
     library('MatchIt')
     data <- read.csv('data.csv')
     r <- matchit( %s, method = "%s", data = data, replace = %s)
+    matrix <- r$match.matrix[,]
+    names <- as.numeric(names(r$match.matrix[,]))
     mtch <- data[as.numeric(names(r$match.matrix[,])),]
     hh <- data[as.numeric(names(r$match.matrix[,])),'%s']- data[as.numeric(r$match.matrix[,]),'%s']
     
     data2 <- data
     data2$%s <- 1 - data2$%s
     r2 <- matchit( %s, method = "%s", data = data2, replace = %s)
+    matrix2 <- r2$match.matrix[,]
+    names2 <- as.numeric(names(r2$match.matrix[,]))
     mtch2 <- data2[as.numeric(names(r2$match.matrix[,])),]
     hh2 <- data2[as.numeric(r2$match.matrix[,]),'%s'] - data2[as.numeric(names(r2$match.matrix[,])),'%s']
     """%( formula_cov,method,replace,outcome,outcome, treatment, treatment, formula_cov,method,replace,outcome,outcome)
@@ -48,7 +52,7 @@ def matchit(outcome, treatment, data, method='nearest',replace=False):
     match = psnn.mtch
     match2 = psnn.mtch2
     t_hat = pd.DataFrame(np.hstack((np.array(psnn.hh),np.array(psnn.hh2))),
-                         index=list(match.rownames)+list(match2.rownames),
+                         index=list(psnn.names.astype(int))+list(psnn.names2.astype(int)),
                          columns=['CATE'])
     ate = np.mean(t_hat['CATE'])
     return ate, t_hat

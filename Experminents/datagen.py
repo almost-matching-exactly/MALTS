@@ -112,7 +112,7 @@ def data_generation_dense_mixed_endo(num_samples, num_cont_imp, num_disc_imp, nu
     def u(x):
         T = []
         for row in x:
-            l = scipy.special.expit(row[0]+row[1]-bias+np.random.normal(0,overlap))
+            l = scipy.special.expit( np.sum(row[:]) - num_cont_imp + np.random.normal(0,overlap))
             t = int( l > 0.5 )
             # l = ( 1 + np.tanh( ( row[0] + row[1] ) / 20 ) ) / 2
             # t = np.random.binomial(1,l/2)
