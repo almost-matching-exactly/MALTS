@@ -22,27 +22,25 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 sns.set()
 
-n = 2000
-num_cov_dense = 5
-num_covs_unimportant = 10
-p = num_cov_dense+num_covs_unimportant
+n = 1024
+num_cov_dense = np.array([8,16,32])
+p = num_cov_dense
 
 np.random.seed(0)
 diff_mean = []
-overlaps = np.sqrt([400,50,1,0.0001])
+
+overlap = 20
+
 df_err = pd.DataFrame()
-for i in range(len(overlaps)):
-    overlap = overlaps[i]
-    df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(n, p, 0, 0, 0, rho=0, scale=1, overlap=overlap)
-    # axi = axes[i]
+for i in range(len(p)):
+    df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(n, p[i], 0, p[i], 0, rho=0, scale=1, overlap=overlap)
     
-    fig = plt.figure()
-    sns.scatterplot(x='X0',y='X1',hue='T',data=df_data,alpha=0.5)
-    df_data_C = df_data.loc[df_data['T']==0][['X%d'%(j) for j in range(p)]]
-    df_data_T = df_data.loc[df_data['T']==1][['X%d'%(j) for j in range(p)]]
-    std_diff_mean = np.sqrt(np.matmul(np.matmul((df_data_T.mean(axis=0) - df_data_C.mean(axis=0)).T,np.linalg.inv(df_data[['X%d'%(j) for j in range(p)]].cov())),(df_data_T.mean(axis=0) - df_data_C.mean(axis=0))))
+    df_data_C = df_data.loc[df_data['T']==0][['X%d'%(j) for j in range(p[i])]]
+    df_data_T = df_data.loc[df_data['T']==1][['X%d'%(j) for j in range(p[i])]]
+    
+    std_diff_mean = np.sqrt(np.matmul(np.matmul((df_data_T.mean(axis=0) - df_data_C.mean(axis=0)).T,np.linalg.inv(df_data[['X%d'%(j) for j in range(p[i])]].cov())),(df_data_T.mean(axis=0) - df_data_C.mean(axis=0))))
     diff_mean.append(std_diff_mean)
-    # axi.title.set_text('Std. Diff.of Mean = %.2f'%(std_diff_mean))
+    print(std_diff_mean)
     
     t_true = df_true['TE']
     ate_true = np.mean(t_true)
@@ -50,8 +48,7 @@ for i in range(len(overlaps)):
     err_malts, err_bart, err_crf, err_genmatch, err_psnn, err_full, err_prog = [], [], [], [], [], [], []
     label_malts, label_bart, label_crf, label_genmatch, label_psnn, label_full, label_prog = [], [], [], [], [], [], []
     
-    
-    m = pymalts.malts_mf( 'Y', 'T', data = df_data, n_splits=5, C=5, k_tr=10, k_est=50 )
+    m = pymalts.malts_mf( 'Y', 'T', data = df_data, n_splits=4, C=5, k_tr=10, k_est=50 )
     cate_df = m.CATE_df
     cate_df['true.CATE'] = df_true['TE'].to_numpy()
 
@@ -75,21 +72,22 @@ for i in range(len(overlaps)):
     label_malts = [ 'MALTS' for i in range(len(err_malts_mf)) ]
     err_malts += err_malts_mf
 
-
+    
     #----------------------------------------------------------------------------------------------
     ##Prognostic
     prog_cate = prognostic.prognostic_cv('Y','T',df_data)
     
     err_prog = list(np.array(list( np.abs(t_true - prog_cate['avg.CATE']) ))/ate_true )
     label_prog = [ 'Prognostic Score' for i in range(len(err_prog)) ]
-
+    
     #----------------------------------------------------------------------------------------------
     ##DBARTS
     bart_cate = bart.bart('Y','T',df_data,n_splits=5)
     
     err_bart = list( np.abs(bart_cate['avg.CATE'] - t_true)/ate_true )
     label_bart = [ 'BART' for i in range(len(err_bart)) ]
-
+    
+    
     #----------------------------------------------------------------------------------------------
     ##Causal Forest
     crf_cate = causalforest.causalforest('Y','T',df_data,n_splits=5)
@@ -102,13 +100,13 @@ for i in range(len(overlaps)):
     # #---------------------------------------------------------------------------------------------
     ##MATCHIT
     ate_genmatch, t_hat_genmatch = matchit.matchit('Y','T',df_data,method='genetic')
+    
     ate_psnn, t_hat_psnn = matchit.matchit('Y','T',df_data,method='nearest')
-    ate_full, t_hat_full = matchit.matchit('Y','T',df_data,method='full')
-
+    
 
     err_genmatch = list( np.abs(t_hat_genmatch['CATE'] - t_true)/ate_true )
     label_genmatch = [ 'GenMatch' for i in range(len(err_genmatch)) ]
-
+    
 
     err_psnn = list( np.abs(t_hat_psnn['CATE'] - t_true)/ate_true )
     label_psnn = [ 'Propensity Score' for i in range(len(err_psnn)) ]
@@ -116,30 +114,33 @@ for i in range(len(overlaps)):
 
     # #---------------------------------------------------------------------------------------------
     
+    
     err = pd.DataFrame()
     err['Relative CATE Error (percentage)'] = np.array(err_malts + err_bart + err_crf + err_genmatch + err_psnn + err_full + err_prog)*100
     err['Method'] = label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog
-    err['Overlap'] = [diff_mean[i] for a in range(len(label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog))]
+    err['#Covariates/#Units'] = [2*p[i]/n for a in range(len(label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog))]
     
     df_err = df_err.append(err,ignore_index=True)
 
-df_err['Overlap (Standardized Difference of Means)'] = df_err['Overlap'].round(decimals=3)
+df_err['#Covariates/#Units'] = df_err['#Covariates/#Units'].round(decimals=7)
 
+sns.set(font_scale=2.,context='paper')
 fig, ax = plt.subplots(figsize=(40,50))
-sns.boxenplot(hue='Method',y='Relative CATE Error (percentage)',x='Overlap (Standardized Difference of Means)', data=df_err)
+sns.boxenplot(hue='Method',y='Relative CATE Error (percentage)',x='#Covariates/#Units', data=df_err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
+plt.ylim((-50,600))
 plt.tight_layout()
-fig.savefig('Figures/boxplot_multifold_malts_overlap.png')
+fig.savefig('Figures/boxplot_multifold_malts_p.png')
  
 fig, ax = plt.subplots(figsize=(40,50))
-sns.violinplot(hue='Method',y='Relative CATE Error (percentage)',x='Overlap (Standardized Difference of Means)', data=df_err)
+sns.violinplot(hue='Method',y='Relative CATE Error (percentage)',x='#Covariates/#Units', data=df_err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
-fig.savefig('Figures/violin_multifold_malts_overlap.png')
+fig.savefig('Figures/violin_multifold_malts_p.png')
 
-df_err.to_csv('Logs/CATE_Multifold_Est_Error_File_1.csv')
+df_err.to_csv('Logs/CATE_Multifold_Est_Error_File_p.csv')
 
 
 
