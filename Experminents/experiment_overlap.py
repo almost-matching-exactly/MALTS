@@ -22,9 +22,9 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 sns.set()
 
-n = 2000
+n = 1000
 num_cov_dense = 5
-num_covs_unimportant = 10
+num_covs_unimportant = 0
 p = num_cov_dense+num_covs_unimportant
 
 np.random.seed(0)
@@ -33,7 +33,7 @@ overlaps = np.sqrt([400,50,1,0.0001])
 df_err = pd.DataFrame()
 for i in range(len(overlaps)):
     overlap = overlaps[i]
-    df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(n, p, 0, 0, 0, rho=0, scale=1, overlap=overlap)
+    df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(n, p, 0, p, 0, rho=0, scale=1, overlap=overlap)
     # axi = axes[i]
     
     fig = plt.figure()
@@ -51,7 +51,7 @@ for i in range(len(overlaps)):
     label_malts, label_bart, label_crf, label_genmatch, label_psnn, label_full, label_prog = [], [], [], [], [], [], []
     
     
-    m = pymalts.malts_mf( 'Y', 'T', data = df_data, n_splits=5, C=5, k_tr=10, k_est=50 )
+    m = pymalts.malts_mf( 'Y', 'T', data = df_data, n_splits=5, C=5, k_tr=10, k_est=10 )
     cate_df = m.CATE_df
     cate_df['true.CATE'] = df_true['TE'].to_numpy()
 
