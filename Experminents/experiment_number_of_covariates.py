@@ -23,7 +23,7 @@ np.random.seed(0)
 sns.set()
 
 n = 1024
-num_cov_dense = np.array([8,16,32])
+num_cov_dense = np.array([16,32,64,128,512])
 p = num_cov_dense
 
 np.random.seed(0)
@@ -68,7 +68,7 @@ for i in range(len(p)):
     plt.ylabel('Estimated CATE')
     fig.savefig('Figures/trueVSestimatedCATE_malts_multifold.png')
     
-    err_malts_mf = list(np.array(list( np.abs(t_true - cate_df['avg.CATE']) ))/ate_true )
+    err_malts_mf = [np.mean(list(np.array(list( np.abs(t_true - cate_df['avg.CATE']) ))/ate_true ))]
     label_malts = [ 'MALTS' for i in range(len(err_malts_mf)) ]
     err_malts += err_malts_mf
 
@@ -77,22 +77,26 @@ for i in range(len(p)):
     ##Prognostic
     prog_cate = prognostic.prognostic_cv('Y','T',df_data)
     
-    err_prog = list(np.array(list( np.abs(t_true - prog_cate['avg.CATE']) ))/ate_true )
+    err_prog = [np.mean(list(np.array(list( np.abs(t_true - prog_cate['avg.CATE']) ))/ate_true ))]
     label_prog = [ 'Prognostic Score' for i in range(len(err_prog)) ]
     
     #----------------------------------------------------------------------------------------------
     ##DBARTS
-    bart_cate = bart.bart('Y','T',df_data,n_splits=5)
-    
-    err_bart = list( np.abs(bart_cate['avg.CATE'] - t_true)/ate_true )
-    label_bart = [ 'BART' for i in range(len(err_bart)) ]
+    try:
+        bart_cate = bart.bart('Y','T',df_data,n_splits=5)
+        
+        err_bart = [np.mean(list( np.abs(bart_cate['avg.CATE'] - t_true)/ate_true ))]
+        label_bart = [ 'BART' for i in range(len(err_bart)) ]
+    except:
+        err_bart = [np.NaN]
+        label_bart = [ 'BART' for i in range(len(err_bart)) ]
     
     
     #----------------------------------------------------------------------------------------------
     ##Causal Forest
     crf_cate = causalforest.causalforest('Y','T',df_data,n_splits=5)
     
-    err_crf = list( np.abs(crf_cate['avg.CATE'] - t_true)/ate_true )
+    err_crf = [np.mean(list( np.abs(crf_cate['avg.CATE'] - t_true)/ate_true ))]
     label_crf = [ 'Causal Forest' for i in range(len(err_crf)) ]
 
 
@@ -104,11 +108,11 @@ for i in range(len(p)):
     ate_psnn, t_hat_psnn = matchit.matchit('Y','T',df_data,method='nearest')
     
 
-    err_genmatch = list( np.abs(t_hat_genmatch['CATE'] - t_true)/ate_true )
+    err_genmatch = [np.mean(list( np.abs(t_hat_genmatch['CATE'] - t_true)/ate_true ))]
     label_genmatch = [ 'GenMatch' for i in range(len(err_genmatch)) ]
     
 
-    err_psnn = list( np.abs(t_hat_psnn['CATE'] - t_true)/ate_true )
+    err_psnn = [np.mean(list( np.abs(t_hat_psnn['CATE'] - t_true)/ate_true ))]
     label_psnn = [ 'Propensity Score' for i in range(len(err_psnn)) ]
 
 
@@ -124,21 +128,21 @@ for i in range(len(p)):
 
 df_err['#Covariates/#Units'] = df_err['#Covariates/#Units'].round(decimals=7)
 
-sns.set(font_scale=2.,context='paper')
-fig, ax = plt.subplots(figsize=(40,50))
-sns.boxenplot(hue='Method',y='Relative CATE Error (percentage)',x='#Covariates/#Units', data=df_err)
-plt.xticks(rotation=65, horizontalalignment='right')
-ax.yaxis.set_major_formatter(ticker.PercentFormatter())
-plt.ylim((-50,600))
-plt.tight_layout()
-fig.savefig('Figures/boxplot_multifold_malts_p.png')
+# sns.set(font_scale=2.,context='paper')
+# fig, ax = plt.subplots(figsize=(40,50))
+# sns.boxenplot(hue='Method',y='Relative CATE Error (percentage)',x='#Covariates/#Units', data=df_err)
+# plt.xticks(rotation=65, horizontalalignment='right')
+# ax.yaxis.set_major_formatter(ticker.PercentFormatter())
+# plt.ylim((-50,600))
+# plt.tight_layout()
+# fig.savefig('Figures/boxplot_multifold_malts_p.png')
  
-fig, ax = plt.subplots(figsize=(40,50))
-sns.violinplot(hue='Method',y='Relative CATE Error (percentage)',x='#Covariates/#Units', data=df_err)
-plt.xticks(rotation=65, horizontalalignment='right')
-ax.yaxis.set_major_formatter(ticker.PercentFormatter())
-plt.tight_layout()
-fig.savefig('Figures/violin_multifold_malts_p.png')
+# fig, ax = plt.subplots(figsize=(40,50))
+# sns.violinplot(hue='Method',y='Relative CATE Error (percentage)',x='#Covariates/#Units', data=df_err)
+# plt.xticks(rotation=65, horizontalalignment='right')
+# ax.yaxis.set_major_formatter(ticker.PercentFormatter())
+# plt.tight_layout()
+# fig.savefig('Figures/violin_multifold_malts_p.png')
 
 df_err.to_csv('Logs/CATE_Multifold_Est_Error_File_p.csv')
 
