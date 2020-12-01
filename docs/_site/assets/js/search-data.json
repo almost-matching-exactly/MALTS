@@ -1,0 +1,26 @@
+{"0": {
+    "doc": "Code to generate documentation for MALTS",
+    "title": "Code to generate documentation for MALTS",
+    "content": "# Code to generate documentation for `MALTS` This directory contains the code for the web site as displayed at https://almost-matching-exactly.github.io/MALTS/ Please go to that site to view the documentation. ",
+    "url": "http://localhost:4000/MALTS/",
+    "relUrl": "/"
+  },"1": {
+    "doc": "Home",
+    "title": "Welcome to the MALTS Python Package Documentation!",
+    "content": "View us on GitHub . malts is a Python package for performing matching for observational causal inference on datasets containing discrete covariates. It implements the Dynamic Almost Matching Exactly (DAME) and Fast, Large-Scale Almost Matching Exactly (FLAME) algorithms, which match treatment and control units on subsets of the covariates. The resulting matched groups are interpretable, because the matches are made on covariates, and high-quality, because machine learning is used to determine which covariates are important to match on. ",
+    "url": "http://localhost:4000/MALTS/#welcome-to-the-malts-python-package-documentation",
+    "relUrl": "/#welcome-to-the-malts-python-package-documentation"
+  },"2": {
+    "doc": "Home",
+    "title": "Contact",
+    "content": "Please reach out to let our team know if you’re using this, or if you have any questions! Contact Neha Gupta at neha.r.gupta@duke.edu. ",
+    "url": "http://localhost:4000/MALTS/#contact",
+    "relUrl": "/#contact"
+  },"3": {
+    "doc": "Home",
+    "title": "Home",
+    "content": " ",
+    "url": "http://localhost:4000/MALTS/",
+    "relUrl": "/"
+  }
+}
