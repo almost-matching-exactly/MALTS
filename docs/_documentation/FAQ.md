@@ -43,7 +43,7 @@ Visualizing data is a valuable tool to understanding it before and after perform
 
 ### Why should I use this instead of another package? Other ones seem more common!
 
-The matches produced by the `dame-flame` package are higher quality. `dame-flame` doesn't use uninterpretable propensity scores, it matches on actual covariates. It doesn't require the user to specify the metric like CEM, since it uses machine learning to learn the metric adaptively. It is not based on a black box machine learning method like Causal Forest or BART, but it can often be just as accurate, and it’s much easier to troubleshoot! <a href="#references">[1]</a>. You can see our simulation [here](https://github.com/nehargupta/dame-flame-experiments/blob/master/DAME_vs_FLAME_vs_Matchit.ipynb) comparing `dame-flame` against MatchIt’s propensity score matching. This simulation shows that our package results in higher-quality matches. Also, the features of the `dame-flame` package are really useful. We offer several built-in treatment effect estimators so that users don’t have to rely on other packages or compute their own, and we offer built-in missing data handling.
+The matches produced by the `Pymalts2` package are higher quality. `Pymalts2` doesn't use uninterpretable propensity scores, it matches on actual covariates. It doesn't require the user to specify the metric like CEM, since it uses machine learning to learn the metric adaptively. It is not based on a black box machine learning method like Causal Forest or BART, but it can often be just as accurate, and it’s much easier to troubleshoot! <a href="#references">[1]</a>. 
 
 ### I have a question not covered here
 
