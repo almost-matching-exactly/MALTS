@@ -5,18 +5,66 @@
     "url": "http://localhost:4000/MALTS/",
     "relUrl": "/"
   },"1": {
+    "doc": "FAQ and Vocabulary Guide",
+    "title": "FAQ and Vocabulary Guide",
+    "content": ". | Vocabulary Guide | FAQ . | What kind of covariates can the dataset have? | Why doesn’t the package have any built-in visualization methods? | Why should I use this instead of another package? Other ones seem more common! | I have a question not covered here | . | . ",
+    "url": "http://localhost:4000/MALTS/FAQ",
+    "relUrl": "/FAQ"
+  },"2": {
+    "doc": "FAQ and Vocabulary Guide",
+    "title": "Vocabulary Guide",
+    "content": "We briefly define some of the terms we use interchangeably throughout this User Guide and in this documentation below. | Unit, Observation, Individual | A participant in the research trial, in either the control group or treatment group, for whom we have an observed outcome | . | Covariate, Observed data, X’s, Independent variables | The data we observe which is not the treatment group or the outcome | . | Outcome, Y, Dependent variables | The outcome variable of the research | . | Treated Unit | A unit which is in the treatment group | . | Treatment Effects | The effect on the outcome by the treatment. | . | Matched group, matches | The list of units a particular covariate is matched with, including their weights | . ",
+    "url": "http://localhost:4000/MALTS/FAQ#vocabulary-guide",
+    "relUrl": "/FAQ#vocabulary-guide"
+  },"3": {
+    "doc": "FAQ and Vocabulary Guide",
+    "title": "FAQ",
+    "content": "What kind of covariates can the dataset have? . MALTS works on continuous, categorical or mixed covariates. Why doesn’t the package have any built-in visualization methods? . Visualizing data is a valuable tool to understanding it before and after performing any analysis like matching. While the PYMALTS2 package doesn’t have built in functions to visualize the data, we provide several examples of ways that researchers could visualize any dataset. Why should I use this instead of another package? Other ones seem more common! . The matches produced by the dame-flame package are higher quality. dame-flame doesn’t use uninterpretable propensity scores, it matches on actual covariates. It doesn’t require the user to specify the metric like CEM, since it uses machine learning to learn the metric adaptively. It is not based on a black box machine learning method like Causal Forest or BART, but it can often be just as accurate, and it’s much easier to troubleshoot! [1]. You can see our simulation here comparing dame-flame against MatchIt’s propensity score matching. This simulation shows that our package results in higher-quality matches. Also, the features of the dame-flame package are really useful. We offer several built-in treatment effect estimators so that users don’t have to rely on other packages or compute their own, and we offer built-in missing data handling. I have a question not covered here . Please reach out to let our team know if you’re using this, or if you have any questions. Contact Harsh Parikh at harsh.parikh@duke.edu . References . [1] Parikh, Rudin, et al. MALTS: Matching After Learning to Stretch. ",
+    "url": "http://localhost:4000/MALTS/FAQ#faq",
+    "relUrl": "/FAQ#faq"
+  },"4": {
+    "doc": "Getting Started",
+    "title": "Getting Started",
+    "content": " ",
+    "url": "http://localhost:4000/MALTS/getting-started",
+    "relUrl": "/getting-started"
+  },"5": {
+    "doc": "Installation and Quickstart Example",
+    "title": "Installation and Quickstart Example",
+    "content": ". | Installation and Quickstart Example . | Dependencies | Installation | Quickstart Example | . | . ",
+    "url": "http://localhost:4000/MALTS/getting-started/installation_example/",
+    "relUrl": "/getting-started/installation_example/"
+  },"6": {
+    "doc": "Installation and Quickstart Example",
+    "title": "Dependencies",
+    "content": "This package requires prior installation of . | Python (&gt;= 3.0) | NumPy (&gt;= 1.17.5) | Scikit-Learn (&gt;= 0.22.1)) | Pandas (todo: check) | Matplotlib | Seaborn | . If your computer system does not have python 3.*, install from here. If your python version does not have the Pandas, Scikit learn, or Numpy packages, install from here . ",
+    "url": "http://localhost:4000/MALTS/getting-started/installation_example/#dependencies",
+    "relUrl": "/getting-started/installation_example/#dependencies"
+  },"7": {
+    "doc": "Installation and Quickstart Example",
+    "title": "Installation",
+    "content": "The DAME-FLAME Python Package is available for download on the almost-matching-exactly Github or via PyPi (recommended): . pip install dame-flame . ",
+    "url": "http://localhost:4000/MALTS/getting-started/installation_example/#installation",
+    "relUrl": "/getting-started/installation_example/#installation"
+  },"8": {
+    "doc": "Installation and Quickstart Example",
+    "title": "Quickstart Example",
+    "content": "We run the DAME function with the following basic command. In this example, we provide only the basic inputs: (1) input data as a dataframe or file, (2) the name of the outcome column, and (3) the name of the treatment column. In this example, because of the toy sized small dataset, we set the holdout dataset equal to the complete input dataset. import pandas as pd import dame_flame df = pd.read_csv(\"dame_flame/data/sample.csv\") model = dame_flame.matching.DAME(repeats=False, verbose=1, early_stop_iterations=False) model.fit(holdout_data=df) result = model.predict(input_data=df) print(result) #&gt; x1 x2 x3 x4 #&gt; 0 0 1 1 * #&gt; 1 0 1 1 * #&gt; 2 1 0 * 1 #&gt; 3 1 0 * 1 print(model.groups_per_unit) #&gt; 0 1.0 #&gt; 1 1.0 #&gt; 2 1.0 #&gt; 3 1.0 print(model.units_per_group) #&gt; [[2, 3], [0, 1]] . result is type Data Frame. The dataframe contains all of the units that were matched, and the covariates and corresponding values, that it was matched on. The covariates that each unit was not matched on is denoted with a “ * “ character. model.groups_per_unit is a Data Frame with a column of unit weights which specifies the number of groups that each unit was placed in. model.units_per_group is a list in which each list is a main matched group, and the unit ids that belong to that group. Additional values based on additional optional parameters can be retrieved, detailed in additional documentation below. To find the main matched group of a particular unit or group of units after DAME has been run, use the function MG: . mmg = dame_flame.utils.post_processing.MG(matching_object=model, unit_id=0) print(mmg) #&gt; x1 x2 x3 x4 treated outcome #&gt; 0 0 1 1 * 0 5 #&gt; 1 0 1 1 * 1 6 . To find the conditional treatment effect (CATE) for the main matched group of a particular unit or group of units, use the function CATE: . te = dame_flame.utils.post_processing.CATE(matching_object=model, unit_id=0) print(te) #&gt; 3.0 . To find the average treatment effect (ATE) or average treatment effect on the treated (ATT), use the functions ATE and ATT, respectively: . ate = dame_flame.utils.post_processing.ATE(matching_object=model) print(ate) #&gt; 2.0 att = dame_flame.utils.post_processing.MG(matching_object=model) print(att) #&gt; 2.0 . ",
+    "url": "http://localhost:4000/MALTS/getting-started/installation_example/#quickstart-example",
+    "relUrl": "/getting-started/installation_example/#quickstart-example"
+  },"9": {
     "doc": "Home",
     "title": "Welcome to the MALTS Python Package Documentation!",
-    "content": "View us on GitHub . malts is a Python package for performing matching for observational causal inference on datasets containing discrete covariates. It implements the Dynamic Almost Matching Exactly (DAME) and Fast, Large-Scale Almost Matching Exactly (FLAME) algorithms, which match treatment and control units on subsets of the covariates. The resulting matched groups are interpretable, because the matches are made on covariates, and high-quality, because machine learning is used to determine which covariates are important to match on. ",
+    "content": "View us on GitHub . pymalts2 is a Python package for performing matching for observational causal inference on datasets containing continuous, categorical, or mixed covariates. It uses exact matching for discrete variables and learns generalized Mahalanobis distances for continuous variables. Instead of a predetermined distance metric, the covariates contributing more towards predicting the outcome are given higher weights. ",
     "url": "http://localhost:4000/MALTS/#welcome-to-the-malts-python-package-documentation",
     "relUrl": "/#welcome-to-the-malts-python-package-documentation"
-  },"2": {
+  },"10": {
     "doc": "Home",
     "title": "Contact",
-    "content": "Please reach out to let our team know if you’re using this, or if you have any questions! Contact Neha Gupta at neha.r.gupta@duke.edu. ",
+    "content": "Please reach out to let our team know if you’re using this, or if you have any questions! Contact Harsh Parikh at harsh.parikh@duke.edu. ",
     "url": "http://localhost:4000/MALTS/#contact",
     "relUrl": "/#contact"
-  },"3": {
+  },"11": {
     "doc": "Home",
     "title": "Home",
     "content": " ",
