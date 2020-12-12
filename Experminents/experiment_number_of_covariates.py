@@ -30,11 +30,20 @@ np.random.seed(0)
 diff_mean = []
 
 overlap = 20
+df_data_array, df_true_array, discrete_array = {},{},{}
 
 df_err = pd.DataFrame()
-for repeat in range(4):
+for repeat in range(5):
     for i in range(len(p)):
+        print((repeat,i))
         df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(n, p[i], 0, p[i], 0, rho=0, scale=1, overlap=overlap)
+        df_data_array[(repeat,i)] = df_data
+        df_true_array[(repeat,i)] = df_true
+        discrete_array[(repeat,i)] = discrete
+        
+for repeat in range(5):
+    for i in range(len(p)):
+        df_data, df_true, discrete = df_data_array[(repeat,i)], df_true_array[(repeat,i)], discrete_array[(repeat,i)]
         
         df_data_C = df_data.loc[df_data['T']==0][['X%d'%(j) for j in range(p[i])]]
         df_data_T = df_data.loc[df_data['T']==1][['X%d'%(j) for j in range(p[i])]]
@@ -123,19 +132,19 @@ for repeat in range(4):
         err = pd.DataFrame()
         err['Relative CATE Error (percentage)'] = np.array(err_malts + err_bart + err_crf + err_genmatch + err_psnn + err_full + err_prog)*100
         err['Method'] = label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog
-        err['#Units/#Covariates'] = [n/(2*p[i]) for a in range(len(label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog))]
+        err['#Covariates'] = [(2*p[i]) for a in range(len(label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog))]
         
         df_err = df_err.append(err,ignore_index=True)
 
-df_err['#Units/#Covariates'] = df_err['#Units/#Covariates'].round(decimals=1)
+df_err['#Covariates'] = df_err['#Covariates'].round(decimals=1)
 df_err['Mean Relative CATE Error (percentage)'] = df_err['Relative CATE Error (percentage)']
 
 sns.set(font_scale=2)
 fig, ax = plt.subplots(figsize=(40,50))
 # sns.lmplot(hue='Method',y='Relative CATE Error (percentage)',x='#Units/#Covariates', data=df_err)
-sns.lineplot(hue='Method',y='Mean Relative CATE Error (percentage)',x='#Units/#Covariates', data=df_err,style='Method',markers=True,linewidth=3.5,markersize=10)
+sns.lineplot(hue='Method',y='Mean Relative CATE Error (percentage)',x='#Covariates', data=df_err,style='Method',markers=True,linewidth=3.5,markersize=10)
 # sns.scatterplot(hue='Method',y='Mean Relative CATE Error (percentage)',x='#Units/#Covariates', data=df_err, legend=False)
-plt.xscale('log')
+plt.xscale('log',basex=2)
 plt.yscale('log')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
