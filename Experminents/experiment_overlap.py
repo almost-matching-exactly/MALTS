@@ -28,7 +28,7 @@ num_covs_unimportant = 0
 p = num_cov_dense+num_covs_unimportant
 
 np.random.seed(0)
-rn_seeds = [0,1,2,3,4,5,6,7,8,9]
+rn_seeds = np.arange(0,50) #[0,1,2,3,4,5,6,7,8,9]
 overlaps = [10e-4,10e-2,10e-1,10e0,10e1]
 
 df_err_array = {}
@@ -147,11 +147,11 @@ for ni in range(len(ns)):
     
 
      
-g = sns.FacetGrid(data=df_err,row='n',hue='Method',aspect=5,margin_titles=True,legend_out=True)
+g = sns.FacetGrid(data=df_err,row='n',hue='Method',aspect=5,margin_titles=False,legend_out=True)
 g.map(sns.lineplot,'Overlap ($\\epsilon_t$)','Error')
 plt.xscale('log')
 g.savefig('Figures/trend_multifold_malts_overlap.png')
-sns.lmplot(x='Overlap (Standardized Difference of Means)', y='Error', data=df_err, hue='Method', row='n',order=2)
+sns.lmplot(x='Overlap (Standardized Difference of Means)', y='Error', data=df_err, hue='Method', row='n',order=2,margin_titles=True,legend_out=False)
 
 df_err.to_csv('Logs/CATE_Multifold_Est_Error_File_o.csv')
 
