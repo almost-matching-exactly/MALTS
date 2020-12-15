@@ -22,7 +22,7 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 sns.set()
 
-n = [256,512,1024,2048,4096,8192]
+n = [256,512,1024,2048,4096]
 num_cov_dense = 5
 p = num_cov_dense
 
@@ -30,102 +30,112 @@ np.random.seed(0)
 diff_mean = []
 
 overlap = 20
-
+df_data_array, df_true_array, discrete_array = {},{},{}
 df_err = pd.DataFrame()
-for i in range(len(n)):
-    df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(n[i], p, 0, 3*p, 0, rho=0, scale=1, overlap=overlap)
-    
-    df_data_C = df_data.loc[df_data['T']==0][['X%d'%(j) for j in range(p)]]
-    df_data_T = df_data.loc[df_data['T']==1][['X%d'%(j) for j in range(p)]]
-    
-    # std_diff_mean = np.sqrt(np.matmul(np.matmul((df_data_T.mean(axis=0) - df_data_C.mean(axis=0)).T,np.linalg.inv(df_data[['X%d'%(j) for j in range(p)]].cov())),(df_data_T.mean(axis=0) - df_data_C.mean(axis=0))))
-    # diff_mean.append(std_diff_mean)
-    # print(std_diff_mean)
-    
-    t_true = df_true['TE']
-    ate_true = np.mean(t_true)
 
-    err_malts, err_bart, err_crf, err_genmatch, err_psnn, err_full, err_prog = [], [], [], [], [], [], []
-    label_malts, label_bart, label_crf, label_genmatch, label_psnn, label_full, label_prog = [], [], [], [], [], [], []
-    
-    m = pymalts.malts_mf( 'Y', 'T', data = df_data, n_splits=5, C=5, k_tr=20, k_est=20, n_repeats=1 )
-    cate_df = m.CATE_df
-    cate_df['true.CATE'] = df_true['TE'].to_numpy()
+for repeat in range(5):
+    for i in range(len(n)):
+        print((repeat,i))
+        df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(n[i], p, 0, 3*p, 0, rho=0, scale=1, overlap=overlap)
+        df_data_array[(repeat,i)] = df_data
+        df_true_array[(repeat,i)] = df_true
+        discrete_array[(repeat,i)] = discrete
 
+for repeat in range(5):
+    for i in range(len(n)):
+        df_data, df_true, discrete = df_data_array[(repeat,i)], df_true_array[(repeat,i)], discrete_array[(repeat,i)]
+        
+        df_data_C = df_data.loc[df_data['T']==0][['X%d'%(j) for j in range(p)]]
+        df_data_T = df_data.loc[df_data['T']==1][['X%d'%(j) for j in range(p)]]
+        
+        # std_diff_mean = np.sqrt(np.matmul(np.matmul((df_data_T.mean(axis=0) - df_data_C.mean(axis=0)).T,np.linalg.inv(df_data[['X%d'%(j) for j in range(p)]].cov())),(df_data_T.mean(axis=0) - df_data_C.mean(axis=0))))
+        # diff_mean.append(std_diff_mean)
+        # print(std_diff_mean)
+        
+        t_true = df_true['TE']
+        ate_true = np.mean(t_true)
     
-    fig, ax = plt.subplots()
-    sns.scatterplot(x='true.CATE',y='avg.CATE',size='std.CATE',hue='T',alpha=0.2,sizes=(10,200),data=cate_df)
-    lims = [
-        np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
-        np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
-    ]
+        err_malts, err_bart, err_crf, err_genmatch, err_psnn, err_full, err_prog = [], [], [], [], [], [], []
+        label_malts, label_bart, label_crf, label_genmatch, label_psnn, label_full, label_prog = [], [], [], [], [], [], []
+        
+        m = pymalts.malts_mf( 'Y', 'T', data = df_data, n_splits=5, C=5, k_tr=20, k_est=20, n_repeats=1 )
+        cate_df = m.CATE_df
+        cate_df['true.CATE'] = df_true['TE'].to_numpy()
     
-    ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
-    ax.set_aspect('equal')
-    ax.set_xlim(lims)
-    ax.set_ylim(lims)
-    plt.xlabel('True CATE')
-    plt.ylabel('Estimated CATE')
-    fig.savefig('Figures/trueVSestimatedCATE_malts_multifold.png')
-    
-    err_malts_mf = [np.nanmean(list(np.array(list( np.abs(t_true - cate_df['avg.CATE']) ))/ate_true ))]
-    label_malts = [ 'MALTS' for i in range(len(err_malts_mf)) ]
-    err_malts += err_malts_mf
-    print('MALTS '+str(np.mean(err_malts_mf)))
-    
-    #----------------------------------------------------------------------------------------------
-    ##Prognostic
-    prog_cate = prognostic.prognostic_cv('Y','T',df_data)
-    
-    err_prog = [np.nanmean(list(np.array(list( np.abs(t_true - prog_cate['avg.CATE']) ))/ate_true ))]
-    label_prog = [ 'Prognostic Score' for i in range(len(err_prog)) ]
-    print('Prognostic '+str(np.mean(err_prog)))
-    
-    #----------------------------------------------------------------------------------------------
-    ##DBARTS
-    try:
-        bart_cate = bart.bart('Y','T',df_data,n_splits=5)
-            
-        err_bart = [np.nanmean(list( np.abs(bart_cate['avg.CATE'] - t_true)/ate_true ))]
-        label_bart = [ 'BART' for i in range(len(err_bart)) ]
-    except:
-        err_bart = [np.NaN]
-        label_bart = [ 'BART' for i in range(len(err_bart)) ]
-    
-    #----------------------------------------------------------------------------------------------
-    ##Causal Forest
-    crf_cate = causalforest.causalforest('Y','T',df_data,n_splits=5)
-    
-    err_crf = [np.nanmean(list( np.abs(crf_cate['avg.CATE'] - t_true)/ate_true ))]
-    label_crf = [ 'Causal Forest' for i in range(len(err_crf)) ]
-    print('Causal Forest '+str(np.mean(err_crf)))
-
-
-    # #---------------------------------------------------------------------------------------------
-    ##MATCHIT
-    '''
-    ate_genmatch, t_hat_genmatch = matchit.matchit('Y','T',df_data,method='genetic')
-    '''
-    ate_psnn, t_hat_psnn = matchit.matchit('Y','T',df_data,method='nearest')
-    
-    '''
-    err_genmatch = list( np.abs(t_hat_genmatch['CATE'] - t_true)/ate_true )
-    label_genmatch = [ 'GenMatch' for i in range(len(err_genmatch)) ]
-    '''
-
-    err_psnn = [np.nanmean(list( np.abs(t_hat_psnn['CATE'] - t_true)/ate_true ))]
-    label_psnn = [ 'Propensity Score' for i in range(len(err_psnn)) ]
-    print('Propensity '+str(np.mean(err_psnn)))
-
-    # #---------------------------------------------------------------------------------------------
+        
+        fig, ax = plt.subplots()
+        sns.scatterplot(x='true.CATE',y='avg.CATE',size='std.CATE',hue='T',alpha=0.2,sizes=(10,200),data=cate_df)
+        lims = [
+            np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
+            np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+        ]
+        
+        ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
+        ax.set_aspect('equal')
+        ax.set_xlim(lims)
+        ax.set_ylim(lims)
+        plt.xlabel('True CATE')
+        plt.ylabel('Estimated CATE')
+        fig.savefig('Figures/trueVSestimatedCATE_malts_multifold.png')
+        
+        err_malts_mf = [np.nanmean(list(np.array(list( np.abs(t_true - cate_df['avg.CATE']) ))/ate_true ))]
+        label_malts = [ 'MALTS' for i in range(len(err_malts_mf)) ]
+        err_malts += err_malts_mf
+        print('MALTS '+str(np.mean(err_malts_mf)))
+        
+        #----------------------------------------------------------------------------------------------
+        ##Prognostic
+        prog_cate = prognostic.prognostic_cv('Y','T',df_data)
+        
+        err_prog = [np.nanmean(list(np.array(list( np.abs(t_true - prog_cate['avg.CATE']) ))/ate_true ))]
+        label_prog = [ 'Prognostic Score' for i in range(len(err_prog)) ]
+        print('Prognostic '+str(np.mean(err_prog)))
+        
+        #----------------------------------------------------------------------------------------------
+        ##DBARTS
+        try:
+            bart_cate = bart.bart('Y','T',df_data,n_splits=5)
+                
+            err_bart = [np.nanmean(list( np.abs(bart_cate['avg.CATE'] - t_true)/ate_true ))]
+            label_bart = [ 'BART' for i in range(len(err_bart)) ]
+        except:
+            err_bart = [np.NaN]
+            label_bart = [ 'BART' for i in range(len(err_bart)) ]
+        
+        #----------------------------------------------------------------------------------------------
+        ##Causal Forest
+        crf_cate = causalforest.causalforest('Y','T',df_data,n_splits=5)
+        
+        err_crf = [np.nanmean(list( np.abs(crf_cate['avg.CATE'] - t_true)/ate_true ))]
+        label_crf = [ 'Causal Forest' for i in range(len(err_crf)) ]
+        print('Causal Forest '+str(np.mean(err_crf)))
     
     
-    err = pd.DataFrame()
-    err['Relative CATE Error (percentage)'] = np.array(err_malts + err_bart + err_crf + err_genmatch + err_psnn + err_full + err_prog)*100
-    err['Method'] = label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog
-    err['#Units'] = [n[i] for a in range(len(label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog))]
+        # #---------------------------------------------------------------------------------------------
+        ##MATCHIT
+        '''
+        ate_genmatch, t_hat_genmatch = matchit.matchit('Y','T',df_data,method='genetic')
+        '''
+        ate_psnn, t_hat_psnn = matchit.matchit('Y','T',df_data,method='nearest')
+        
+        '''
+        err_genmatch = list( np.abs(t_hat_genmatch['CATE'] - t_true)/ate_true )
+        label_genmatch = [ 'GenMatch' for i in range(len(err_genmatch)) ]
+        '''
     
-    df_err = df_err.append(err,ignore_index=True)
+        err_psnn = [np.nanmean(list( np.abs(t_hat_psnn['CATE'] - t_true)/ate_true ))]
+        label_psnn = [ 'Propensity Score' for i in range(len(err_psnn)) ]
+        print('Propensity '+str(np.mean(err_psnn)))
+    
+        # #---------------------------------------------------------------------------------------------
+        
+        
+        err = pd.DataFrame()
+        err['Relative CATE Error (percentage)'] = np.array(err_malts + err_bart + err_crf + err_genmatch + err_psnn + err_full + err_prog)*100
+        err['Method'] = label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog
+        err['#Units'] = [n[i] for a in range(len(label_malts + label_bart + label_crf + label_genmatch + label_psnn + label_full + label_prog))]
+        
+        df_err = df_err.append(err,ignore_index=True)
 
 df_err['Mean Relative CATE Error (percentage)'] = df_err['Relative CATE Error (percentage)']
 
