@@ -30,7 +30,7 @@ imp_d = 15
 unimp_c = 10
 unimp_d = 10
 
-df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(num_samples, imp_c, imp_d, unimp_c, unimp_d, rho=0)
+df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(num_samples, imp_c, imp_d, unimp_c, unimp_d, rho=0, overlap=1 )
 
 m = pymalts.malts_mf( 'Y', 'T', data = df_data, discrete=discrete, k_tr=15, k_est=80, n_splits=5 )
 cate_df = m.CATE_df
@@ -101,15 +101,16 @@ df_err['Relative Error (%)'] = df_err['Relative Error (%)'] * 100
 
 sns.set_context("paper")
 sns.set_style("darkgrid")
+sns.set(font_scale=2)
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(40,50))
 sns.boxenplot(x='Method',y='Relative Error (%)',data=df_err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('Figures/boxplot_multifold_malts_mixed.png')
  
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(40,50))
 sns.violinplot(x='Method',y='Relative Error (%)',data=df_err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())

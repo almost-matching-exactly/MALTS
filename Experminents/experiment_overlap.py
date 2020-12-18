@@ -21,7 +21,7 @@ warnings.filterwarnings("ignore")
  
 np.random.seed(0)
 sns.set()
-
+'''
 ns = [500,2000,4000]
 num_cov_dense = 4
 num_covs_unimportant = 0
@@ -156,8 +156,11 @@ sns.lmplot(x='Overlap (Standardized Difference of Means)', y='Error', data=df_er
 df_err.to_csv('Logs/CATE_Multifold_Est_Error_File_o.csv')
 
 
-
-
+df_err_4000 = df_err.loc[df_err['n']==4000]
+df_err_4000 = df_err_4000.loc[df_err_4000['Method']!='Propensity Score']
+fig, ax = plt.subplots(figsize=(40,50))
+sns.scatterplot(data=df_err_4000,x='Overlap (Standardized Difference of Means)',y='Error',hue='Method',s=100)
+'''
 
 # handles, labels = axi.get_legend_handles_labels()
 # plt.tight_layout()

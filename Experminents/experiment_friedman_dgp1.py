@@ -24,7 +24,7 @@ import scipy
 def u(x):
     T = []
     for row in x:
-        l = scipy.special.expit(row[0]+row[1]-0.5+np.random.normal(0,20))
+        l = scipy.special.expit(row[0]+row[1]-0.5+np.random.normal(0,1))
         t = int( l > 0.5 )
         T.append(t)
     return np.array(T)
@@ -83,12 +83,13 @@ df_err_psnn = pd.DataFrame()
 df_err_psnn['Method'] = ['Propensity Score' for i in range(t_psnn.shape[0])] 
 df_err_psnn['Relative Error (%)'] = np.abs((t_psnn['CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
 
-
+'''
 ate_gen, t_gen = matchit.matchit('Y','T',data=df_data,method='genetic',replace=True)
-
+'''
 df_err_gen = pd.DataFrame()
-df_err_gen['Method'] = ['GenMatch' for i in range(t_gen.shape[0])] 
-df_err_gen['Relative Error (%)'] = np.abs((t_gen['CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
+
+df_err_gen['Method'] = []#['GenMatch' for i in range(t_gen.shape[0])] 
+df_err_gen['Relative Error (%)'] = []#np.abs((t_gen['CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
 
 
 cate_est_prog = prognostic.prognostic_cv('Y', 'T', df_data,n_splits=5)

@@ -24,11 +24,12 @@ num_covs_unimportant = 25
 n_est = 1500
 num_covariates = num_cov_dense+num_covs_unimportant
 
-df_train, df_true_train = dg.data_generation_dense_endo(numExample, num_cov_dense, num_covs_unimportant,rho=0)
+df_train, df_true_train, discrete = dg.data_generation_dense_mixed_endo(numExample, num_cov_dense, 0, num_covs_unimportant, 0, rho=0, scale=1, overlap=1) #dg.data_generation_dense_endo(numExample, num_cov_dense, num_covs_unimportant,rho=0)
 
 X,Y,T = np.array(df_train[df_train.columns[0:num_covariates]]), np.array(df_train['Y']), np.array(df_train['T'])
 
-df_est, df_true_est = dg.data_generation_dense_endo(n_est, num_cov_dense, num_covs_unimportant,rho=0.2)
+df_est, df_true_est, discrete = dg.data_generation_dense_mixed_endo(n_est, num_cov_dense, 0, num_covs_unimportant, 0, rho=0, scale=1, overlap=1) #dg.data_generation_dense_endo(numExample, num_cov_dense, num_covs_unimportant,rho=0)
+# dg.data_generation_dense_endo(n_est, num_cov_dense, num_covs_unimportant,rho=0.2)
 
 df_data = df_train.append(df_est,ignore_index=True)
 df_data_true = df_true_train.append(df_true_est,ignore_index=True)
@@ -42,7 +43,7 @@ err_malts, err_bart, err_crf, err_genmatch, err_psnn, err_full, err_prog = [], [
 label_malts, label_bart, label_crf, label_genmatch, label_psnn, label_full, label_prog = [], [], [], [], [], [], []
 
 
-m = pymalts.malts_mf( 'Y', 'T', data = df_data, n_splits=5, C=5, k=10 )
+m = pymalts.malts_mf( 'Y', 'T', data = df_data, n_splits=5, C=5, k_tr=10, k_est=50 )
 cate_df = m.CATE_df['CATE']
 cate_df['avg.CATE'] = cate_df.mean(axis=1)
 cate_df['std.CATE'] = cate_df.std(axis=1)
@@ -53,7 +54,7 @@ cate_df['err.CATE'] = np.abs(cate_df['avg.CATE']-cate_df['true.CATE'])
 # sns.regplot(x='std.CATE',y='err.CATE',data=cate_df)
 # sns.scatterplot(x='true.CATE',y='avg.CATE',size='std.CATE',data=cate_df)
 
-
+'''
 m = pymalts.malts('Y','T',data=df_train, discrete=[], C=5,k=10)
 res = m.fit()
 print(res.x)
@@ -80,16 +81,17 @@ ax.set_ylim(lims)
 plt.xlabel('True CATE')
 plt.ylabel('Estimated CATE')
 fig.savefig('Figures/trueVSestimatedCATE_malts_multifold.png')
+'''
 
 err_malts_mf = list(np.array(list( np.abs(cate_df['true.CATE'] - cate_df['avg.CATE']) ))/ate_true )
 err_malts_mean = [] #list( np.array(list( np.abs(t_true - cate_mean['CATE']) )) )
-err_malts_linear = list(np.array(list( np.abs(t_true - cate_linear['CATE']) ))/ate_true )
+err_malts_linear = []# list(np.array(list( np.abs(t_true - cate_linear['CATE']) ))/ate_true )
 err_malts_RF = [] #list(np.array(list( np.abs(t_true - cate_RF['CATE']) )))
 
 label_malts = [ 'MALTS (mean)' for i in range(len(err_malts_mean)) ]+[ 'MALTS (linear)' for i in range(len(err_malts_linear)) ]+[ 'MALTS (RF)' for i in range(len(err_malts_RF)) ]
 err_malts = err_malts_mean + err_malts_linear + err_malts_RF
 
-label_malts = [ 'MALTS (Multifold)' for i in range(len(err_malts_mf)) ]
+label_malts = [ 'MALTS' for i in range(len(err_malts_mf)) ]
 err_malts += err_malts_mf
 
 

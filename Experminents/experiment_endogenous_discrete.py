@@ -31,7 +31,7 @@ imp_d = 15
 unimp_c = 0
 unimp_d = 10
 
-df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(num_samples, imp_c, imp_d, unimp_c, unimp_d, rho=0)
+df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(num_samples, imp_c, imp_d, unimp_c, unimp_d, rho=0, overlap=1)
 
 m = pymalts.malts_mf( 'Y', 'T', data = df_data, discrete=discrete, k_tr=25, k_est=80, n_splits=5 )
 cate_df = m.CATE_df
@@ -61,8 +61,11 @@ plt.ylabel('Estimated CATE')
 fig.savefig('Figures/trueVSestimatedCATE_malts_discrete.png')
 
 ##OTHERS METHODS
-result = flame.DAME_FLAME.FLAME(input_data=df_data, treatment_column_name='T', outcome_column_name='Y', holdout_data=1.0)
-t_flame = np.array(list(map( lambda x: flame.DAME_FLAME.te_of_unit(result[0],x,df_data,'T','Y'), df_data.index)))
+model = flame.matching.FLAME()
+model.fit(holdout_data=df_data, treatment_column_name='T', outcome_column_name='Y')
+result = model.predict(df_data)
+# result = flame.DAME_FLAME.FLAME(input_data=df_data, treatment_column_name='T', outcome_column_name='Y', holdout_data=1.0)
+t_flame = np.array(flame.utils.post_processing.CATE(model,df_data.index)) #np.array(list(map( lambda x: flame.DAME_FLAME.te_of_unit(result[0],x,df_data,'T','Y'), df_data.index)))
 df_err_flame = pd.DataFrame()
 df_err_flame['Method'] = ['FLAME' for i in range(t_flame.shape[0])] 
 df_err_flame['Relative Error (%)'] = np.abs((t_flame - df_true['TE'].to_numpy())/df_true['TE'].mean())
@@ -126,14 +129,17 @@ df_err['Relative Error (%)'] = df_err['Relative Error (%)'] * 100
 sns.set_context("paper")
 sns.set_style("darkgrid")
 
-fig, ax = plt.subplots()
+sns.set(font_scale=2)
+
+fig, ax = plt.subplots(figsize=(40,50))
 sns.boxenplot(x='Method',y='Relative Error (%)',data=df_err,linewidth=0)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('Figures/boxplot_multifold_malts_discrete.png')
- 
-fig, ax = plt.subplots()
+
+
+fig, ax = plt.subplots(figsize=(40,50))
 sns.violinplot(x='Method',y='Relative Error (%)',data=df_err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
