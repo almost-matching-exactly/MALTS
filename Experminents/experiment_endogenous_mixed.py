@@ -21,7 +21,8 @@ import matplotlib.ticker as ticker
 import seaborn as sns
 import warnings
 warnings.filterwarnings("ignore")
- 
+
+''' 
 np.random.seed(0)
 
 num_samples = 2500
@@ -118,3 +119,4 @@ plt.tight_layout()
 fig.savefig('Figures/violin_multifold_malts_mixed.png')
 
 df_err.to_csv('df_err_mixed.csv')
+'''

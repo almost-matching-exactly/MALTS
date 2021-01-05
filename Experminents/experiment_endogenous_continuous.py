@@ -101,7 +101,7 @@ df_err['Relative Error (%)'] = df_err['Relative Error (%)'] * 100
 
 sns.set_context("paper")
 sns.set_style("darkgrid")
-sns.set(font_scale=2)
+sns.set(font_scale=3)
 
 fig, ax = plt.subplots(figsize=(40,50))
 sns.boxenplot(x='Method',y='Relative Error (%)',data=df_err)
@@ -109,6 +109,8 @@ plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('Figures/boxplot_multifold_malts_continuous.png')
+import textwrap
+ax.set_xticklabels([textwrap.fill(t.get_text(), 10)  for t in ax.get_xticklabels()])
  
 fig, ax = plt.subplots(figsize=(40,50))
 sns.violinplot(x='Method',y='Relative Error (%)',data=df_err)

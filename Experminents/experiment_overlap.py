@@ -144,10 +144,11 @@ for ni in range(len(ns)):
     # ax.yaxis.set_major_formatter(ticker.PercentFormatter())
     # plt.tight_layout()
     # fig.savefig('Figures/boxplot_multifold_malts_overlap.png')
-    
 
+methods = ['MALTS','Propensity Score','GenMatch','Prognostic Score','BART','Causal Forest','FLAME']
+palette = { methods[i]:sns.color_palette()[i] for i in range(len(methods)) }
      
-g = sns.FacetGrid(data=df_err,row='n',hue='Method',aspect=5,margin_titles=False,legend_out=True)
+g = sns.FacetGrid(data=df_err,row='n',hue='Method',height=5,aspect=3,margin_titles=True,legend_out=True,palette=palette)
 g.map(sns.lineplot,'Overlap ($\\epsilon_t$)','Error')
 plt.xscale('log')
 g.savefig('Figures/trend_multifold_malts_overlap.png')
@@ -159,7 +160,7 @@ df_err.to_csv('Logs/CATE_Multifold_Est_Error_File_o.csv')
 df_err_4000 = df_err.loc[df_err['n']==4000]
 df_err_4000 = df_err_4000.loc[df_err_4000['Method']!='Propensity Score']
 fig, ax = plt.subplots(figsize=(40,50))
-sns.scatterplot(data=df_err_4000,x='Overlap (Standardized Difference of Means)',y='Error',hue='Method',s=100)
+sns.scatterplot(data=df_err_4000,x='Overlap (Standardized Difference of Means)',y='Error',hue='Method',style='Method',s=100,palette=palette)
 '''
 
 # handles, labels = axi.get_legend_handles_labels()

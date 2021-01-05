@@ -22,21 +22,28 @@ warnings.filterwarnings("ignore")
 np.random.seed(0)
 sns.set()
 
-n = 1024
+n = 2048
 num_cov_dense = np.array([1,2,4,16,128,256])
 p = num_cov_dense
 
 np.random.seed(0)
 diff_mean = []
 
-overlap = 20
+overlap = 1
 df_data_array, df_true_array, discrete_array = {},{},{}
 
 df_err = pd.DataFrame()
 for repeat in range(5):
     for i in range(len(p)):
         print((repeat,i))
-        df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(n, p[i], 0, p[i], 0, rho=0, scale=1, overlap=overlap)
+        #arguments: number of units = n, 
+        #number of important continuous cov = p[i], 
+        #number of important discrete cov = 0,
+        #number of non-important continuous cov = p[i], 
+        #number of non-important discrete cov = 0
+        #var epsilon_i,1 and var epsilon_i,0 = 1
+        #var epsilon_i,treat = 1
+        df_data, df_true, discrete = dg.data_generation_dense_mixed_endo( n, p[i], 0, p[i], 0, rho=0, scale=1, overlap=overlap) 
         df_data_array[(repeat,i)] = df_data
         df_true_array[(repeat,i)] = df_true
         discrete_array[(repeat,i)] = discrete
@@ -138,11 +145,15 @@ for repeat in range(5):
 
 df_err['#Covariates'] = df_err['#Covariates'].round(decimals=1)
 df_err['Mean Relative CATE Error (percentage)'] = df_err['Relative CATE Error (percentage)']
+methods = ['MALTS','Propensity Score','GenMatch','Prognostic Score','BART','Causal Forest','FLAME']
+palette = { methods[i]:sns.color_palette()[i] for i in range(len(methods)) }
+
 
 sns.set(font_scale=2)
 fig, ax = plt.subplots(figsize=(40,50))
 # sns.lmplot(hue='Method',y='Relative CATE Error (percentage)',x='#Units/#Covariates', data=df_err)
-sns.lineplot(hue='Method',y='Mean Relative CATE Error (percentage)',x='#Covariates', data=df_err,style='Method',markers=True,linewidth=3.5,markersize=10)
+sns.lineplot(hue='Method',y='Mean Relative CATE Error (percentage)',x='#Covariates', data=df_err,style='Method',markers=True,
+             linewidth=3.5,markersize=10,palette=palette)
 # sns.scatterplot(hue='Method',y='Mean Relative CATE Error (percentage)',x='#Units/#Covariates', data=df_err, legend=False)
 plt.xscale('log',basex=2)
 plt.yscale('log')

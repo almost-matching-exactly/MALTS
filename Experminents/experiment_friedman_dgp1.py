@@ -124,34 +124,42 @@ df_err_2['Relative Error (%)'] = df_err_2['Relative Error (%)'] * 100
 
 sns.set_context("paper")
 sns.set_style("darkgrid")
+methods = ['MALTS','Propensity Score','GenMatch','Prognostic Score','BART','Causal Forest','FLAME']
+palette = { methods[i]:sns.color_palette()[i] for i in range(len(methods)) }
 
-fig, ax = plt.subplots()
-sns.boxenplot(x='Method',y='Relative Error (%)',data=df_err)
+fig, ax = plt.subplots(figsize=(40,50))
+sns.boxenplot(x='Method',y='Relative Error (%)',data=df_err,palette=palette)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('Figures/boxplot_multifold_malts_friedman.png')
- 
-fig, ax = plt.subplots()
+import textwrap
+ax.set_xticklabels([textwrap.fill(t.get_text(), 10)  for t in ax.get_xticklabels()])
+
+fig, ax = plt.subplots(figsize=(40,50))
 sns.violinplot(x='Method',y='Relative Error (%)',data=df_err)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('Figures/violin_multifold_malts_friedman.png')
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(40,50))
 sns.boxenplot(x='Method',y='Relative Error (%)',data=df_err_2)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('Figures/boxplot_multifold_malts_friedman_2.png')
- 
-fig, ax = plt.subplots()
+import textwrap
+ax.set_xticklabels([textwrap.fill(t.get_text(), 10)  for t in ax.get_xticklabels()])
+
+ig, ax = plt.subplots(figsize=(40,50))
 sns.violinplot(x='Method',y='Relative Error (%)',data=df_err_2)
 plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('Figures/violin_multifold_malts_friedman_2.png')
-
+import textwrap
+ax.set_xticklabels([textwrap.fill(t.get_text(), 10)  for t in ax.get_xticklabels()])
 
 df_err.to_csv('df_err_friedman.csv')
+

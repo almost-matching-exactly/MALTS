@@ -47,6 +47,7 @@ for scale in std:
         # coverage_true_std.append(cate_df['covered.True.std'].mean())
 df_coverage = coverage_malts_std
 df_coverage.to_csv('coverage.csv')
+
 fig, axes = plt.subplots(nrows=3, ncols=3,sharey=True,sharex=True)
 for i in range(0,9):
     df_coverage_i = df_coverage.loc[i]

@@ -137,6 +137,8 @@ plt.xticks(rotation=65, horizontalalignment='right')
 ax.yaxis.set_major_formatter(ticker.PercentFormatter())
 plt.tight_layout()
 fig.savefig('Figures/boxplot_multifold_malts_discrete.png')
+import textwrap
+ax.set_xticklabels([textwrap.fill(t.get_text(), 10)  for t in ax.get_xticklabels()])
 
 
 fig, ax = plt.subplots(figsize=(40,50))
