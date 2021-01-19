@@ -25,7 +25,7 @@ description: >- # this means to ignore newlines until "baseurl:"
 baseurl: "/MALTS" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 logo_link: "https://almost-matching-exactly.github.io"
-github_username:  jekyll	github_username:  almost-matching-exactly
+github_username:  almost-matching-exactly
 
 # Build settings
 remote_theme: pmarsceill/just-the-docs
