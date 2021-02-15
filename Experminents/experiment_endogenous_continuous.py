@@ -31,7 +31,7 @@ unimp_c = 25
 unimp_d = 0
 
 df_data, df_true, discrete = dg.data_generation_dense_mixed_endo(num_samples, imp_c, imp_d, unimp_c, unimp_d, rho=0, overlap=1)
-
+'''
 m = pymalts.malts_mf( 'Y', 'T', data = df_data, discrete=discrete, k_tr=15, k_est=80, n_splits=5 )
 cate_df = m.CATE_df
 
@@ -80,13 +80,13 @@ df_err_prog = pd.DataFrame()
 df_err_prog['Method'] = ['Prognostic Score' for i in range(cate_est_prog.shape[0])] 
 df_err_prog['Relative Error (%)'] = np.abs((cate_est_prog['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
 
-
+'''
 cate_est_bart = bart.bart('Y','T',df_data,n_splits=5)
 
 df_err_bart = pd.DataFrame()
 df_err_bart['Method'] = ['BART' for i in range(cate_est_bart.shape[0])] 
 df_err_bart['Relative Error (%)'] = np.abs((cate_est_bart['avg.CATE'].to_numpy() - df_true['TE'].to_numpy())/df_true['TE'].mean())
-
+'''
 
 cate_est_cf = causalforest.causalforest('Y','T',df_data,n_splits=5)
 
@@ -120,6 +120,7 @@ plt.tight_layout()
 fig.savefig('Figures/violin_multifold_malts_continuous.png')
 
 df_err.to_csv('df_err_continuous.csv')
+'''
 
 '''
 ##VISUALIZING Matched Group Matrix

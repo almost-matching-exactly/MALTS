@@ -40,13 +40,13 @@ def bart(outcome,treatment,data,n_splits,result='brief'):
         Xt = np.array(df_train.loc[df_train[treatment]==1,covariates])
         Yt = np.array(df_train.loc[df_train[treatment]==1,outcome])
         #
-        Xtest = df_est[covariates]
+        Xtest = df_train[covariates]
         bart_res_c = dbarts.bart(Xc,Yc,Xtest,keeptrees=True,verbose=False)
         y_c_hat_bart = np.array(bart_res_c[7])
         bart_res_t = dbarts.bart(Xt,Yt,Xtest,keeptrees=True,verbose=False)
         y_t_hat_bart = np.array(bart_res_t[7])
         t_hat_bart = np.array(y_t_hat_bart - y_c_hat_bart)
-        cate_est_i = pd.DataFrame(t_hat_bart, index=df_est.index, columns=['CATE'])
+        cate_est_i = pd.DataFrame(t_hat_bart, index=df_train.index, columns=['CATE'])
         cate_est = pd.concat([cate_est, cate_est_i], join='outer', axis=1)
     cate_est['avg.CATE'] = cate_est.mean(axis=1)
     cate_est['std.CATE'] = cate_est.std(axis=1)

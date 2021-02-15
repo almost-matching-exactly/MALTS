@@ -141,7 +141,7 @@ df_err['Mean Relative CATE Error (percentage)'] = df_err['Relative CATE Error (p
 methods = ['MALTS','Propensity Score','GenMatch','Prognostic Score','BART','Causal Forest','FLAME']
 palette = { methods[i]:sns.color_palette()[i] for i in range(len(methods)) }
 
-sns.set(font_scale=2)
+sns.set(font_scale=3)
 fig, ax = plt.subplots(figsize=(40,50))
 # sns.lmplot(hue='Method',y='Relative CATE Error (percentage)',x='#Units/#Covariates', data=df_err)
 sns.lineplot(hue='Method',y='Mean Relative CATE Error (percentage)',x='#Units', data=df_err,style='Method',markers=True,linewidth=3.5,markersize=10,palette=palette)
