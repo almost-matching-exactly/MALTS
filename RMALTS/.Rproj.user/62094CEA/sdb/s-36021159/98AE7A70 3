@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "fit(X,Y,T,K):\n  Mopt <- min objective(M,X,Y,T,K)\n  return Mopt\n\nobjective(M,X,Y,T,K):\n  c = 0.01\n  loss =  c*norm(M) + sum_i[ y_i - (1/K) * sum_(j in KNN(x_i,t_i,X,T,K)) [ y_j ] ]\n  return loss\n\nKNN(x_i,t_i,X,T,K):\n  #find K nearest neigbhours ={x_j,t_j,y_j} of x_i such that t_i = t_j\n  return\n",
+    "created" : 1586088856629.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3233524461",
+    "id" : "98AE7A70",
+    "lastKnownWriteTime" : 1586148963,
+    "last_content_update" : 1586148963408,
+    "path" : "~/Desktop/Harsh/RMALTS/Algorithm",
+    "project_path" : "Algorithm",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "text"
+}

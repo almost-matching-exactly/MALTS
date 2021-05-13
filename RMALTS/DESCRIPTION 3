@@ -1,0 +1,16 @@
+Package: RMALTS
+Type: Package
+Title: What the Package Does (Title Case)
+Version: 0.1.0
+Author: Harsh Parikh, Ankita Gupta
+Maintainer: Who to complain to <yourfault@somewhere.net>
+Description: More about what it does (maybe more than one line)
+Depends:
+
+Imports:
+
+
+Suggests:
+
+License: What license is it under?
+LazyData: TRUE

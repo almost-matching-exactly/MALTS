@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "Package: RMALTS\nType: Package\nTitle: What the Package Does (Title Case)\nVersion: 0.1.0\nAuthor: Harsh Parikh, Ankita Gupta\nMaintainer: Who to complain to <yourfault@somewhere.net>\nDescription: More about what it does (maybe more than one line)\nDepends:\n\nImports:\n\n\nSuggests:\n\nLicense: What license is it under?\nLazyData: TRUE\n",
+    "created" : 1581113940045.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "656116380",
+    "id" : "80E4FAC3",
+    "lastKnownWriteTime" : 1581289771,
+    "last_content_update" : 1581289771630,
+    "path" : "~/Desktop/Harsh/RMALTS/DESCRIPTION",
+    "project_path" : "DESCRIPTION",
+    "properties" : {
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "dcf"
+}
