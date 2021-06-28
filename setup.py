@@ -4,7 +4,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="harsh-parikh",
+    name="pymalts",
     version="0.1.0",
     author="Harsh Parikh",
     author_email="harsh.parikh@duke.edu",
