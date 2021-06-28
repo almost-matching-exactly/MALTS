@@ -306,18 +306,18 @@ class malts_mf:
             cate_df['std.gbr.CATE'] = np.abs(upper_model.predict(data[self.continuous+self.discrete]) - lower_model.predict(data[self.continuous+self.discrete]))/4
             cate_df['avg.gbr.CATE'] = mid_model.predict(data[self.continuous+self.discrete])
             
-            kernel = 1.0 * RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e3)) + WhiteKernel(noise_level=0.1, noise_level_bounds=(1e-10, np.std(cate_df['avg.CATE'])))
-            gaussian_model = gp.GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=100,normalize_y=True)
-            gaussian_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
-            gp_pred = gaussian_model.predict(data[self.continuous+self.discrete], return_std=True)
-            cate_df['std.gp.CATE'] = gp_pred[1]
-            cate_df['avg.gp.CATE'] = gp_pred[0]
+            # kernel = 1.0 * RBF(length_scale=1.0, length_scale_bounds=(1e-2, 1e3)) + WhiteKernel(noise_level=0.1, noise_level_bounds=(1e-10, np.std(cate_df['avg.CATE'])))
+            # gaussian_model = gp.GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=100,normalize_y=True)
+            # gaussian_model.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+            # gp_pred = gaussian_model.predict(data[self.continuous+self.discrete], return_std=True)
+            # cate_df['std.gp.CATE'] = gp_pred[1]
+            # cate_df['avg.gp.CATE'] = gp_pred[0]
             
-            bayes_ridge = lm.BayesianRidge(fit_intercept=True)
-            bayes_ridge.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
-            br_pred = bayes_ridge.predict(data[self.continuous+self.discrete], return_std=True)
-            cate_df['std.br.CATE'] = br_pred[1]
-            cate_df['avg.br.CATE'] = br_pred[0]
+            # bayes_ridge = lm.BayesianRidge(fit_intercept=True)
+            # bayes_ridge.fit(data[self.continuous+self.discrete], cate_df['avg.CATE'])
+            # br_pred = bayes_ridge.predict(data[self.continuous+self.discrete], return_std=True)
+            # cate_df['std.br.CATE'] = br_pred[1]
+            # cate_df['avg.br.CATE'] = br_pred[0]
             
             if smooth_cate:
                 cate_df['avg.CATE'] = cate_df['avg.gbr.CATE']
