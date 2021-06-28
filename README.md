@@ -9,13 +9,13 @@ PyMALTS is a Python3 library and it requires Numpy, Pandas, Scipy, Scikit-Learn,
 ### Installation
 
 ```python
-pip install pymalts2
+pip install git+https://github.com/almost-matching-exactly/MALTS.git
 ```
 
 ### Importing
 
 ```python
-import pymalts2 as pymalts
+import pymalts
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
