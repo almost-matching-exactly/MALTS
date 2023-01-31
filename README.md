@@ -20,7 +20,7 @@ pip install git+https://github.com/almost-matching-exactly/MALTS.git
 **R**
 ```R
 devtools::install_github('https://github.com/almost-matching-exactly/MALTS', 
-                          subdir = 'RMALTS')
+                         subdir = 'RMALTS/MALTS')
 ```
 
 ### Importing
@@ -204,8 +204,7 @@ df.head()
 
 **R**
 ```R
-df <- read.csv('~/Downloads/MALTS-master/example/example_data.csv', 
-                row.names = 1)
+df <- read.csv('example/example_data.csv', row.names = 1)
 # dim(df)
 # head(df)
 ```
