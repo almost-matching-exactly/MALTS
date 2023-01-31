@@ -1,19 +1,30 @@
 # Introduction
 
-PyMALTS is a learning-to-matching interpretable causal inference method. PyMALTS implements MALTS algorithm proposed by Harsh Parikh, Cynthia Rudin and Alexander Volfovsky in their 2019 paper titled "MALTS: Matching After Learning to Stretch"
+MALTS is a learning-to-match method for interpretable causal inference proposed by Harsh Parikh, Cynthia Rudin and Alexander Volfovsky in their 2019 paper ["MALTS: Matching After Learning to Stretch"](https://www.jmlr.org/papers/volume23/21-0053/21-0053.pdf). This repository contains `PyMALTS` and `MALTS`, Python and R implementations, respectively, of the MALTS algorithm.  
 
-## Dependencies
+## Setup
+### Dependencies
+**Python**
 
-PyMALTS is a Python3 library and it requires Numpy, Pandas, Scipy, Scikit-Learn, Matplotlib and Seaborn.
+`PyMALTS` is a Python3 library and it requires `numpy`, `pandas`, `scipy`, `scikit-learn`, `matplotlib` and `seaborn`.
+
+**R**
+
+`MALTS` requires `nloptr` for distance metric learning.
 
 ### Installation
-
+**Python**
 ```python
 pip install git+https://github.com/almost-matching-exactly/MALTS.git
 ```
+**R**
+```R
+devtools::install_github('https://github.com/almost-matching-exactly/MALTS', 
+                          subdir = 'RMALTS')
+```
 
 ### Importing
-
+**Python**
 ```python
 import pymalts
 import numpy as np
@@ -24,8 +35,13 @@ np.random.seed(0)
 sns.set()
 ```
 
-## Reading Data
+**R**
+```R
+library(MALTS)
+```
 
+## Reading Data
+**Python**
 
 ```python
 df = pd.read_csv('example/example_data.csv',index_col=0)
@@ -186,24 +202,32 @@ df.head()
 </table>
 </div>
 
-
+**R**
+```R
+df <- read.csv('~/Downloads/MALTS-master/example/example_data.csv', 
+                row.names = 1)
+# dim(df)
+# head(df)
+```
 
 # Using MALTS
 
 ## Distance Metric Learning
-
-Setting up the model for learning the distance metric.
-1. Variable name for the outcome variable: 'outcome'.
-2. Variable name for the treatment variable: 'treated'
-3. Data is assigned to python variable df
-
-
-
+**Python**
 ```python
-m = pymalts.malts_mf( outcome='outcome', treatment='treated', data=df) # running MALTS with default setting
+# Default settings
+m = pymalts.malts_mf( outcome='outcome', treatment='treated', data=df) 
+```
+
+**R**
+```r
+# Default settings
+m <- MALTS(data = df, outcome = 'outcome', treatment = 'treated')
 ```
 
 ## Matched Groups
+
+**Python**
 
 Matched Group matrix (MG_matrix) is NxN matrix with each row corresponding to each query unit and each column corresponds to matched units. Cell (i,j) in the matrix corresponds to the weight of unit j in the matched group of unit i. The weight corresponds to the numbers of times a unit is included in a matched group across M-folds.
 
@@ -538,10 +562,32 @@ MG1[MG1>1].sort_values(ascending=False).plot(kind='bar',figsize=(20,5)) #Visuali
 
 ![png](example/output_17_1.png)
 
+**R**
 
-## ATE and CATE Estimates
+Matched groups can be found in the `MGs` entry of the output of `MALTS`. 
+```R
+# Matched group of first unit
+# m$MGs[[1]]
+```
 
+Additional information on matched groups can be found by creating and printing 
+an object of type `mg.malts`:
+```R
+mg <- make_MG(1, m)
+print(mg)
+```
+    The main matched group of unit 1355:
+      Matched to 100 units, 50 treated and 50 control.
+      The estimated CATE is: 68.7998289.
+    
+    Matched Group Diameters:
+      Minimum    4.075537 
+      Median     9.627976 
+      Maximum    24.24158 
 
+## Treatment Effect Estimates
+
+**Python**
 ```python
 m.CATE_df #each row is a cate estimate for a corresponding unit
 ```
@@ -646,7 +692,7 @@ m.CATE_df #each row is a cate estimate for a corresponding unit
 
 
 
-Estimate Average Treatment Effect (ATE)
+Estimating the Average Treatment Effect (ATE)
 
 
 ```python
@@ -659,10 +705,106 @@ ATE
 
     42.29673993471417
 
+**R**
+```R
+head(m$data[, c('CATE', 'outcome', 'treated', 'weight')])
+summary(m)
+```
+
+<div>
+
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>CATE</th>
+      <th>outcome</th>
+      <th>treated</th>
+      <th>weight</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1355</th>
+      <td>70.906045</td>
+      <td>-15.679894</td>
+      <td>0</td>
+      <td>36</td>
+    </tr>
+    <tr>
+      <th>1320</th>   
+      <td>28.225496</td>
+      <td>-7.068587 </td>
+      <td>0</td>
+      <td>93</td>
+    </tr>
+    <tr>
+      <th>1233</th>
+      <td>28.303075</td>
+      <td>-5.133200</td>
+      <td>0</td>
+      <td>12</td>
+    </tr>
+    <tr>
+      <th>706</th>
+      <td>51.583478</td>
+      <td>39.684984</td>
+      <td>1</td>
+      <td>35</td>
+    </tr>
+    <tr>
+      <th>438</th>
+      <td>6.905143</td>
+      <td>-2.954324</td>
+      <td>0</td>
+      <td>76</td>
+    </tr>
+    <tr>
+      <th>184</th>
+      <td>17.845249</td>
+      <td>-6.901449</td>
+      <td>0</td>
+      <td>65</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+    Average Treatment Effects:
+                 Mean Variance 
+      All            41.4    0.963 
+      Treated        43.9     1.19 
+      Control        40.5    0.978 
+
+    Stretch Values:
+                    Minimum      Maximum 
+        Continuous  0.0608 (X17) 2.86 (X3) 
 
 
-Visualizing ATE and probability density function of CATE (using KDE plot)
 
+## Documentation
+*Please refer to the internal R package documentation for full details on* `MALTS`.
+
+| **Argument Type**          | **Python**      | **R**                                                              |
+|----------------------------|------------------------|---------------------------------------------------------------------------|
+| Input data                 | `data`                   | `data`                                                                      |
+| Name of outcome column     | `outcome`                | `outcome`                                                                   |
+| Name of treatment column   | `treatment`              | `treatment`                                                                 |
+| Names of discrete columns  | `discrete`               | `discrete`                                                                  |
+| Loss regularization        | `C`                      | `C`                                                                         |
+| Matched group sizes        | `k_tr`, `k_est`            | `k_tr`, `k_est`                                                               |
+| Reweighting                | `reweight`               | `reweight`                                                                  |
+| CATE Smoothing             | `smooth_CATE`, `estimator` | NA                                                                        |
+| Refitting                  | `n_repeats`              | NA                                                                        |
+| CATE data frame formatting | `output_format`          | NA                                                                        |
+| Missing data handling      | NA                     | `missing_data`, `missing_holdout`,<br /> `impute_with_outcome`, `impute_with_treatment` |
+| Optimization parameters    | NA                     | `...` |
+
+
+# Visualization
+
+## Visualizing CATE Estimates
+**Python**
 
 ```python
 fig = plt.figure(figsize=(10,5))
@@ -681,30 +823,24 @@ plt.text(ATE-4,0.04,'$\hat{ATE}$',rotation=90)
 
 ![png](example/output_23_1.png)
 
+**R**
+```R
+plot(m, which_plots = 2)
+```
+![png](example/RMALTS_cate_dist.png)
 
-## MALTS Arguments
+## Visualizing the Stretch Matrix
+**R**
+```R
+plot(m, which_plots = 1)
+```
+![png](example/RMALTS_stretch.png)
 
-1. **outcome**: 	Name of the outcome variable column in the data
-2. **treatment**: 	Name of the treatment variable column in the data
-3. **data**: 			Data in the pandas Dataframe format
-4. **discrete**: 		List of column names which are discrete (dummified); Default=[]
-5. **C**: 				Regularization constant; Default=1
-6. **k_tr**: 			Size of matched group in training step; Default=15
-7. **k_est**: 			Size of matched group in estimation step; Default=50
-8. **estimator**: 		CATE estimator inside a matched group; Default='linear'; Options: 'linear','mean' or 'RF'
-9. **smooth_cate**: 	Boolean to smoothen CATE estimates by fitting a regression model; Default=True
-10. **reweight**: 		Reweight treated and control groups as per their respective sample sizes in training step; Default=False,
-11. **n_splits**: 		Number of splits of the data for n_split-fold procedure; Default=5
-12. **n_repeats**: 		Number of repeats of the whole procedure; Default=1
-13. **output_format**: 	Output format of CATE dataframe; Default='brief'; Options: 'brief' or 'full'
-
-# Visualization
-
-## Looking Inside a Matched-Group
+## Looking Inside a Matched Group
 
 Plotting the X1 and X2 marginal of matched-group of unit "0" 
 
-
+**Python**
 ```python
 MG0 = m.MG_matrix.loc[0] #fetching the matched group
 matched_units_idx = MG0[MG0!=0].index #getting the indices of the matched units 
@@ -717,7 +853,6 @@ plt.title('Matched Group for Unit-0') #setting title of the plot
 
 
 
-
     Text(0.5, 1, 'Matched Group for Unit-0')
 
 
@@ -725,21 +860,33 @@ plt.title('Matched Group for Unit-0') #setting title of the plot
 
 ![png](example/output_29_1.png)
 
+**R**
+```R
+mg <- make_MG(1, m)
+plot(mg, 'X1', 'X2', smooth = TRUE)
+```
+
+![png](example/RMALTS_mg_plot.png)
 
 ## Plotting CATE versus covariate
 
 Plotting CATE v.s. X1
 
+**Python**
 
 ```python
 data_w_cate = df.join(m.CATE_df, rsuffix='_').drop(columns=['outcome_','treated_']) #joining cate dataframe with data
 
 sns.regplot( x='X1', y='avg.CATE', data=data_w_cate, scatter_kws={'alpha':0.5,'s':2}, line_kws={'color':'black'}, order=2 ) #fitting a degree 2 polynomial X1 on CATE
 ```
-
-
-
-
-
 ![png](example/output_32_1.png)
+
+**R**
+```R
+plot_CATE(m, 'X1', smooth = TRUE)
+```
+![png](example/RMALTS_cate_by_x.png)
+
+
+
 
