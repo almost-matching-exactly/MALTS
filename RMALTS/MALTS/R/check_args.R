@@ -1,5 +1,5 @@
 check_args <-
-  function(data, holdout, C,
+  function(data, C,
            impute_with_outcome, impute_with_treatment, info) {
 
     discrete <- info$discrete
@@ -10,11 +10,6 @@ check_args <-
     if (!is.data.frame(data)) {
       stop('`data` must be a data frame or a character denoting a .csv file ',
            'in the working directory.')
-    }
-    if (!is.data.frame(holdout)) {
-      stop('`holdout` must be a data frame, a character denoting a .csv ' ,
-           'file in the working directory, or a numeric proportion of ',
-           '`data` to use as a holdout set.')
     }
 
     if (info$estimate_CATEs && info$outcome_type != 'continuous') {
@@ -36,33 +31,14 @@ check_args <-
       stop('`data` must contain both treated and control units.')
     }
 
-    if (length(unique(holdout[[treated_column_name]])) == 1) {
-      stop('`holdout` must contain both treated and control units.')
-    }
-
     data_cols <- colnames(data)
-    holdout_cols <- colnames(holdout)
-
-    # Seems like I can remove but maybe there's a reason I put it up here...?
-    if (!(outcome_column_name %in% holdout_cols)) {
-      stop('`holdout` must contain outcome column with name ',
-           '`outcome_column_name`')
-    }
 
     cov_inds_data <- which(!(colnames(data) %in%
                                c(treated_column_name, outcome_column_name)))
-    cov_inds_holdout <- which(!(colnames(holdout) %in%
-                                  c(treated_column_name, outcome_column_name)))
 
     if (any(!(discrete %in% data_cols))) {
       stop('Supplied a variable name in `discrete` that is not present in ',
            '`data`.', call. = FALSE)
-    }
-
-    if (!identical(colnames(data)[cov_inds_data],
-                   colnames(holdout[cov_inds_holdout]))) {
-      stop('Covariate columns of `data` and `holdout` ',
-           'must have have the same names and be in the same order.')
     }
 
     if (!is.numeric(C) | C < 0 | is.infinite(C)) {
@@ -77,16 +53,8 @@ check_args <-
       stop('`treated_column_name` must be the name of a column in `data.`')
     }
 
-    if (!(treated_column_name %in% holdout_cols)) {
-      stop('`treated_column_name` must be the name of a column in `holdout.`')
-    }
-
     if (is.factor(data[[treated_column_name]])) {
       stop('Treated variable in `data` must be numeric binary or logical.')
-    }
-
-    if (is.factor(holdout[[treated_column_name]])) {
-      stop('Treated variable in `holdout` must be numeric binary or logical.')
     }
 
     if (!is.character(outcome_column_name)) {
@@ -96,10 +64,6 @@ check_args <-
     if (info$outcome_type != 'none' & !(outcome_column_name %in% data_cols)) {
       stop('`outcome_column_name` must be the name of a column in `data.` ',
            'if outcome is supplied.')
-    }
-
-    if (!(outcome_column_name %in% holdout_cols)) {
-      stop('`outcome_column_name` must be the name of a column in `holdout.`')
     }
 
     if (!is.logical(replace)) {
@@ -115,12 +79,6 @@ check_args <-
         !requireNamespace("mice", quietly = TRUE)) {
       stop("Package `mice` needed to impute missing values. Please install it",
            " or select different options for `missing_data`.",
-           call. = FALSE)
-    }
-    else if (info$missing_holdout == 'impute' &&
-             !requireNamespace("mice", quietly = TRUE)) {
-      stop("Package `mice` needed to impute missing values. Please install it",
-           " or select different options for `missing_holdout`.",
            call. = FALSE)
     }
 

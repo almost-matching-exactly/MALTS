@@ -33,6 +33,8 @@
 #' @param reweight A logical scalar denoting if treated and control groups
 #'   should be reweighted during training, according to their respective samples
 #'   sizes. Defaults to \code{FALSE}.
+#' @param n_repeats A positive integer controlling how many times MALTS should be
+#'   run. Defaults to 1.
 #' @param estimate_CATEs A logical scalar. If \code{TRUE}, CATEs for each unit
 #'   are estimated throughout the matching procedure, which will be much faster
 #'   than computing them after a call to \code{MALTS} for very large inputs.
@@ -73,34 +75,81 @@ NULL
 #> NULL
 #' @rdname MALTS
 #' @export
-MALTS <- function(data, holdout = 0.1,
-                  outcome = 'outcome', treatment = 'treated',
+#'
+MALTS <- function(data, outcome = 'outcome', treatment = 'treated',
                   discrete, C = 1, k_tr = 15, k_est = 50, reweight = FALSE,
-                  estimate_CATEs = TRUE,
+                  n_folds = 5, n_repeats = 1, estimate_CATEs = TRUE,
+                  smooth_CATEs = TRUE,
                   missing_data = c('none', 'drop', 'impute'),
-                  missing_holdout = c('none', 'drop', 'impute'),
-                  impute_with_outcome = FALSE,
-                  impute_with_treatment = FALSE,
+                  impute_with_outcome = FALSE, impute_with_treatment = FALSE,
                   ...) {
 
   missing_data <- match.arg(missing_data)
-  missing_holdout <- match.arg(missing_holdout)
 
-  out <- preprocess(data, holdout, treatment, outcome, discrete, C, k_tr,
+  out <- preprocess(data, treatment, outcome, discrete, C, k_tr,
                     k_est, reweight, estimate_CATEs,
-                    missing_data, missing_holdout,
+                    missing_data,
                     impute_with_outcome, impute_with_treatment)
 
   data <- out$data
-  holdout <- out$holdout
   info <- out$info
 
-  covariates <- !(colnames(data) %in% c(treatment, outcome))
+  covariates <- !(colnames(data) %in% c(treatment, outcome, 'missing'))
 
   discrete <- info$discrete
   continuous <- setdiff(colnames(data),
                         c(discrete, treatment, outcome, 'missing'))
 
+
+  malts_out <- vector('list', length = 4)
+  names(malts_out) <- c('data', 'info', 'M', 'MGs')
+  info$convergence <- vector('numeric', n_folds * n_repeats)
+  malts_out$M <- matrix(NA, nrow = n_folds * n_repeats, ncol = sum(covariates))
+  colnames(malts_out$M) <- colnames(data)[covariates]
+  malts_out$MGs <- vector('list', length = n_folds * n_repeats)
+
+  CATEs <- matrix(NA, nrow = n_folds * n_repeats, ncol = nrow(data))
+  for (i in seq_len(n_repeats)) {
+    folds <- stratified_k_fold(data, n_folds)
+    for (j in seq_len(n_folds)) {
+      ind <- j + (i - 1) * n_folds
+      tmp <- MALTS.int(data[folds != j, ], data[folds == j, ],
+                       outcome, treatment, discrete, continuous, info,
+                       C, k_tr, k_est,
+                       reweight, estimate_CATEs)
+
+      malts_out$M[ind, ] <- tmp$M
+      malts_out$MGs[[ind]] <- tmp$MGs
+      CATEs[ind, folds != j] <- tmp$CATEs
+      info$convergence[ind] <- tmp$convergence
+    }
+  }
+
+  # Make sure discrete covariates are factors
+  avg_CATE <- colMeans(CATEs, na.rm = TRUE)
+  data$CATE <- avg_CATE
+
+  form <- paste('CATE ~', paste(c(discrete, continuous), collapse = '+'))
+  if (smooth_CATEs) {
+    fit <- rq(form, tau = c(0.05, 0.95), data = data)
+    sd_CATE <- (fit$fitted.values[, 2] - fit$fitted.values[, 1]) / 4
+    stopifnot(all(sd_CATE > 0))
+    avg_CATE <- lm(form, data = data)$fitted.values
+  }
+  else {
+    sd_CATE <- apply(CATEs, 2, sd, na.rm = TRUE)
+  }
+  data$sd_CATE <- sd_CATE
+  data$missing <- NULL
+  malts_out$data <- data
+  malts_out$info <- info
+  class(malts_out) <- 'malts'
+  return(malts_out)
+}
+
+MALTS.int <- function(data, holdout, outcome,
+                      treatment, discrete, continuous, info,
+                      C, k_tr, k_est, reweight, estimate_CATEs, ...) {
   treated <- holdout[treatment] == 1
   control <- holdout[treatment] == 0
 
@@ -134,7 +183,6 @@ MALTS <- function(data, holdout = 0.1,
 
   info$convergence <- fit_out$convergence
 
-  # units <- as.numeric(rownames(data))
   n <- nrow(data)
   ##### Should reconsider making discrete correspond to the whole data ######
 
@@ -208,7 +256,7 @@ MALTS <- function(data, holdout = 0.1,
     MG <- c(MG, inds_t[dists <= sort(dists, partial = k_est)[k_est]])
 
     MG <- c(i, MG)
-    # browser()
+
     if (info$estimate_CATEs) {
       CATEs[i] <- estimate_CATEs(i, Tr, Y, MG, info)
     }
@@ -218,11 +266,12 @@ MALTS <- function(data, holdout = 0.1,
     MGs[[i]] <- MG
   }
 
-  if (info$estimate_CATEs && info$outcome_type %in% c('binary', 'continuous')) {
-    data$CATE <- CATEs
-  }
-  data$weight <- weights
+  # if (info$estimate_CATEs && info$outcome_type %in% c('binary', 'continuous')) {
+  # data$CATE <- CATEs
+  # }
+  # data$weight <- weights
 
-  malts_out <- postprocess(data, MGs, M, info)
-  return(malts_out)
+  return(list(MGs = MGs, M = M, weights = weights, CATEs = CATEs,
+              convergence = fit_out$convergence))
+  # malts_out <- postprocess(data, MGs, M, info)
 }

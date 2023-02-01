@@ -26,10 +26,8 @@ impute_missing <- function(data, outcome_in_data,
 }
 
 handle_missing_data <-
-  function(data, holdout,
-           treated_column_name, outcome_column_name,
-           missing_data, missing_holdout,
-           impute_with_treatment, impute_with_outcome) {
+  function(data, treated_column_name, outcome_column_name,
+           missing_data, impute_with_treatment, impute_with_outcome) {
 
     outcome_in_data <- !is.null(data[[outcome_column_name]])
 
@@ -45,15 +43,8 @@ handle_missing_data <-
       to_drop_data <- is.na(data[[treated_column_name]])
     }
 
-    to_drop_holdout <- is.na(holdout[[outcome_column_name]]) |
-      is.na(holdout[[treated_column_name]])
-
     if (any(to_drop_data)) {
       message('Found missingness in `data` in treatment and/or outcome; ',
-              'corresponding rows will be dropped.')
-    }
-    if (any(to_drop_holdout)) {
-      message('Found missingness in `holdout` in treatment and/or outcome; ',
               'corresponding rows will be dropped.')
     }
 
@@ -61,13 +52,8 @@ handle_missing_data <-
       stop('Dropping all rows in `data` due to missingness ',
            'in treatment and/or outcome.')
     }
-    if (all(to_drop_holdout)) {
-      stop('Dropping all rows in `holdout` due to missingness ',
-           'in treatment and/or outcome.')
-    }
 
     data <- data[!to_drop_data, ]
-    holdout <- holdout[!to_drop_holdout, ]
 
     orig_missing <- which(is.na(data), arr.ind = TRUE)
 
@@ -101,29 +87,7 @@ handle_missing_data <-
       }
     }
 
-    if (missing_holdout == 'none') {
-      if (sum(is.na(holdout)) > 0) {
-        stop('Found missingness in `holdout` but was told to assume ',
-             'there was none. Please either change `missing_holdout` or ',
-             'supply `holdout` without missingness.')
-      }
-    }
-    else if (missing_holdout == 'drop') {
-      holdout <- holdout[complete.cases(holdout), ]
-    }
-    else if (missing_holdout == 'impute') {
-      if (sum(is.na(holdout)) > 0) {
-        message('Starting imputation of `holdout`\r', appendLF = FALSE)
-        holdout <-
-          impute_missing(holdout, outcome_in_data,
-                         treated_column_name, outcome_column_name,
-                         impute_with_treatment, impute_with_outcome)
-        message('Finished imputation of `holdout`\r', appendLF = FALSE)
-      }
-    }
-
     return(list(data = data,
-                holdout = holdout,
                 is_missing = is_missing,
                 orig_missing = orig_missing))
   }

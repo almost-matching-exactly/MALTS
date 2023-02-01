@@ -1,3 +1,6 @@
+BLUE <- '#56B4E9'
+ORANGE <- '#E69F00'
+
 convert_nlopt_code <- function(val) {
   if (val == 1) {
     'Success'
@@ -41,19 +44,44 @@ convert_nlopt_code <- function(val) {
 #'
 #' @param unit Query unit whose matched group is desired
 #' @param MALTS_out An object of type \code{malts}
+#' @param threshold_n,threshold_p How often -- across A positive integer
+#'   denoting the number of times -- across multiple runs and multiple
+#'   train-test splits -- a unit must have been matched to another in order to
+#'   be considered within the latter's matched group. \code{threshold_p}
+#'   specifies a proportion and \code{threshold_n} specifies a number of times.
+#'   Defaults to \code{threshold_n = 1}.
 #'
 #' @return An object of type \code{mg.malts}
 #' @export
-make_MG <- function(unit, MALTS_out) {
+make_MG <- function(unit, MALTS_out, threshold_n, threshold_p) {
+
+  if (!missing(threshold_n) & !missing(threshold_p)) {
+    stop('Only one of `threshold_n` and `threshold_p` can be supplied.')
+  }
+  if (!missing(threshold_p)) {
+    threshold <- threshold_p * length(MALTS_out$MGs)
+  }
+  else {
+    threshold <- ifelse(missing(threshold_n), 1, threshold_n)
+  }
+
   # Rownames thing...
-  MG <- MALTS_out$data[MALTS_out$MG[[unit]], ]
+
+  # All MGs of that unit
+  MGs <- lapply(MALTS_out$MGs, function(x) x[[unit]])
+
+  n_times_matched <- table(unlist(MGs))
+  above_threshold <- as.integer(names(which(n_times_matched >= threshold)))
+  MG <- MALTS_out$data[above_threshold, ]
+
   info <- MALTS_out$info
   info$algo <- NULL
   info$missing_data <- NULL
   info$missing_holdout <- NULL
   info$replacement <- NULL
 
-  out <- list(data = MG, info = info, M = MALTS_out$M)
+  out <- list(data = MG, info = info, M = MALTS_out$M,
+              query = unit, threshold = ceiling(threshold))
   class(out) <- 'mg.malts'
   return(out)
 }
@@ -83,38 +111,40 @@ summary.mg.malts <- function(object, ...) {
   out <- list()
   info <- object$info
 
-  covs <- names(object$M)
-
-  # Fix data.matrix once we've figured out what to do with factors here
-  X <- data.matrix(object$data[covs])
-
-  disc <- info$discrete
-  cont <- setdiff(covs, disc)
-
-  # Make sure the first is always the MG
-  diffs_cont <- sweep(X[, cont], 2, X[, cont][1, ])
-  diffs_disc <- sweep(X[, disc], 2, X[, disc][1, ], function(x, y) x != y) * 1
-  diffs <- matrix(nrow = nrow(X), ncol = length(covs))
-  colnames(diffs) <- covs
-  for (j in seq_along(covs)) {
-    if (covs[j] %in% disc) {
-      diffs[, j] <- diffs_disc[, covs[j]]
-    }
-    else {
-      diffs[, j] <- diffs_cont[, covs[j]]
-    }
-  }
-
-  # Memory efficiency...
-  distances <- diag(diffs %*% diag(object$M) %*% t(diffs))
-  distances <- distances[distances > 0] # eliminate self
-
-  out$distance <- list('min' = min(distances),
-                       'median' = median(distances),
-                       'max' = max(distances))
+  ####### Think about what makes the most sense for M. Average? Min/max over all
+  ####### runs? even those not involving a match with a given unit on that run?
+  # covs <- names(object$M)
+  #
+  # # Fix data.matrix once we've figured out what to do with factors here
+  # X <- data.matrix(object$data[covs])
+  #
+  # disc <- info$discrete
+  # cont <- setdiff(covs, disc)
+  #
+  # # Make sure the first is always the MG
+  # diffs_cont <- sweep(X[, cont], 2, X[, cont][1, ])
+  # diffs_disc <- sweep(X[, disc], 2, X[, disc][1, ], function(x, y) x != y) * 1
+  # diffs <- matrix(nrow = nrow(X), ncol = length(covs))
+  # colnames(diffs) <- covs
+  # for (j in seq_along(covs)) {
+  #   if (covs[j] %in% disc) {
+  #     diffs[, j] <- diffs_disc[, covs[j]]
+  #   }
+  #   else {
+  #     diffs[, j] <- diffs_cont[, covs[j]]
+  #   }
+  # }
+  #
+  # # Memory efficiency...
+  # distances <- diag(diffs %*% diag(object$M) %*% t(diffs))
+  # distances <- distances[distances > 0] # eliminate self
+  #
+  # out$distance <- list('min' = min(distances),
+  #                      'median' = median(distances),
+  #                      'max' = max(distances))
 
   # Or store in info?
-  out$query <- rownames(object$data)[1]
+  # out$query <- rownames(object$data)[1]
   Tr <- object$data[[object$info$treatment]]
 
   if (object$info$outcome_type == 'continuous') {
@@ -128,8 +158,11 @@ summary.mg.malts <- function(object, ...) {
   out$n_matches <- c(n_match_c, n_match_t)
 
   if (object$info$outcome_type == 'continuous') {
-    out$CATE <- mean(Y[Tr == 1]) - mean(Y[Tr == 0])
+    out$CATE_pruned <- mean(Y[Tr == 1]) - mean(Y[Tr == 0])
+    out$CATE_unpruned <- object$data$CATE[rownames(object$data) == object$query]
   }
+  out$threshold <- object$threshold
+  out$query <- object$query
   class(out) <- 'summary.mg.malts'
   return(out)
 }
@@ -153,14 +186,21 @@ print.summary.mg.malts <-
                 width = linewidth, indent = indentation, exdent = indentation),
         sep = '\n ')
 
-    if ('CATE' %in% names(x)) {
-      cat(strwrap(paste0(' ', 'The estimated CATE is: ',
-                         round(x$CATE, digits = digits), '.'),
+    if ('CATE_pruned' %in% names(x)) {
+      cat(strwrap(paste0(' ', 'The unpruned CATE estimate is: ',
+                         round(x$CATE_unpruned, digits = digits), '.'),
+                  width = linewidth,
+                  indent = indentation, exdent = indentation),
+          sep = '\n ')
+      cat(strwrap(paste0(' ', 'The pruned CATE estimate (with a threshold of ',
+                         x$threshold, ') is: ',
+                         round(x$CATE_pruned, digits = digits), '.'),
                   width = linewidth,
                   indent = indentation, exdent = indentation),
           sep = '\n ')
     }
-    # browser()
+
+    return(invisible(x))
 
     lablen <- 12
     cat('\nMatched Group Diameters:\n')
@@ -274,18 +314,36 @@ print.malts <- function(x, digits = getOption('digits'), linewidth = 80, ...) {
 
   indentation <- 2
   cat('An object of class `malts`:\n')
-  cat(strwrap(paste(' ', 'MALTS matched ',
-                    n_matched, 'out of', n_total, 'units',
-                    ifelse(replacement, 'with', 'without'), 'replacement.'),
-              width = linewidth, indent = indentation, exdent = indentation),
-      sep = '\n ')
+  # cat(strwrap(paste(' ', 'MALTS matched ',
+  #                   n_matched, 'out of', n_total, 'units',
+  #                   ifelse(replacement, 'with', 'without'), 'replacement.'),
+  #             width = linewidth, indent = indentation, exdent = indentation),
+  #     sep = '\n ')
 
-  cat(paste('MALTS terminated',
-            ifelse(x$info$convergence > 0, 'successfully', 'unsuccessfully')),
-      '\n')
+  #######
+  if (all(x$info$convergence > 0)) {
+    success_status <- 'successfully'
+  }
+  else if (all(x$info$convergence < 0)) {
+    success_status <- 'unsuccessfully'
+  }
+  else {
+    success_status <- 'with_mixed_success'
+  }
+  cat(paste('  MALTS terminated', success_status), '\n')
 
-  cat(paste('  Reason for stopping:', convert_nlopt_code(x$info$convergence)),
-      '\n')
+  n_convergence_types <- table(x$info$convergence)
+  cat('  Optimization stopped', '\n')
+  for (i in seq_along(n_convergence_types)) {
+    cat(paste('   ', n_convergence_types[i], 'times due to:',
+              convert_nlopt_code(as.integer(names(n_convergence_types[i])))),
+        '\n')
+  }
+
+  # cat(paste('  Reason for stopping:', convert_nlopt_code(x$info$convergence)),
+  #     '\n')
+
+  #######
 
   if (outcome_type == 'continuous') {
     cat(strwrap(paste0('  The average treatment effect of `',
@@ -313,25 +371,8 @@ print.malts <- function(x, digits = getOption('digits'), linewidth = 80, ...) {
     missing_data_message <- NULL
   }
 
-  if (x$info$missing_holdout == 'drop') {
-    missing_holdout_message <-
-      'Units with missingness in the holdout data were not used to compute PE.'
-  }
-  else if (x$info$missing_holdout == 'impute') {
-    missing_holdout_message <-
-      'Missing values in the holdout data were imputed by MICE.'
-  }
-  else if (x$info$missing_holdout == 'none') {
-    missing_holdout_message <- NULL
-  }
-
   if (!is.null(missing_data_message)) {
     cat(strwrap(missing_data_message,
-                width = linewidth, indent = indentation, exdent = indentation),
-        sep = '\n ')
-  }
-  if (!is.null(missing_holdout_message)) {
-    cat(strwrap(missing_holdout_message,
                 width = linewidth, indent = indentation, exdent = indentation),
         sep = '\n ')
   }
@@ -350,8 +391,11 @@ print.malts <- function(x, digits = getOption('digits'), linewidth = 80, ...) {
 #' \code{MALTS}.
 #'
 #' \code{plot.malts} displays two plots by default. The first shows the diagonal
-#' entries of the stretch matrix \eqn{M} used to define distance between units;
-#' the second plots a density estimate of the estimated CATE distribution.
+#' entries of the stretch matrix \eqn{M} used to define distance between units,
+#' with boxplots over multiple runs (\code{n_repeats}) and train-test splits
+#' (\code{n_folds}). The second plots a density estimate of the estimated CATE
+#' distribution, where the CATEs are (possibly smoothed) averages over multiple
+#' runs (\code{n_repeats}) or train-test splits (\code{n_folds}).
 #'
 #' @param x An object of class \code{malts}, returned by a call to
 #'   \code{\link{MALTS}}.
@@ -397,7 +441,8 @@ plot.malts <- function(x, which_plots = c(1, 2), ...) {
   ATE <- mean(CATEs)
 
   if (1 %in% which_plots) {
-    barplot(x$M, xlab = 'Feature', ylab = 'Stretch Factor')
+    boxplot(x$M, xlab = 'Feature', ylab = 'Stretch Factor', col = BLUE)
+    # barplot(x$M, xlab = 'Feature', ylab = 'Stretch Factor')
     n_plotted <- n_plotted + 1
   }
 
@@ -422,18 +467,18 @@ plot.malts <- function(x, which_plots = c(1, 2), ...) {
          ylab = '', main = '',
          zero.line = FALSE)
 
-    abline(v = ATE, lty = 2, col = '#0072B2')
+    abline(v = ATE, lty = 2, col = BLUE)
     if (include_null) {
-      abline(v = 0, lty = 3, col = '#D55E00')
+      abline(v = 0, lty = 3, col = ORANGE)
     }
 
     if (include_null) {
       legend('topright',
              legend = c('Estimated ATE', 'Null Effect'),
-             lty = c(2, 3), col = c('#0072B2', '#D55E00'))
+             lty = c(2, 3), col = c(BLUE, ORANGE))
     }
     else {
-      legend('topright', legend = c('Estimated ATE'), lty = 2, col = '#0072B2')
+      legend('topright', legend = c('Estimated ATE'), lty = 2, col = BLUE)
     }
   }
   return(invisible(x))
@@ -491,12 +536,12 @@ plot.mg.malts <- function(x, cov1, cov2, smooth = FALSE, ...) {
     data <- data[!(data[, xlab] %in% bad), ]
     data[, xlab] <- droplevels(data[, xlab])
 
-    boxplot(form, data = data, xaxs = FALSE, col = c('#56B4E9', '#E69F00'),
+    boxplot(form, data = data, xaxs = FALSE, col = c(BLUE, ORANGE),
             xaxt = 'n', xlab = xlab)
     axis(1, at = seq(1.5, 2 * length(disc_vals) - 0.5, by = 2),
          labels = disc_vals)
     legend('topright', legend = c('control', 'treated'), pch = c(16, 16),
-           col = c('#56B4E9', '#E69F00'), )
+           col = c(BLUE, ORANGE))
   }
   else if (cov1 %in% discrete && cov2 %in% discrete) {
     unique1 <- unique(x$data[, cov1])
@@ -525,18 +570,18 @@ plot.mg.malts <- function(x, cov1, cov2, smooth = FALSE, ...) {
 
     # par(mar = c(5, 4, 6, 2) + 0.1, xpd = TRUE)
     plot(x$data[treated, cov1], x$data[treated, cov2],
-         col = "#E69F00", xlab = cov1, ylab = cov2)
-    points(x$data[!treated, cov1], x$data[!treated, cov2], col = "#56B4E9")
+         col = ORANGE, xlab = cov1, ylab = cov2)
+    points(x$data[!treated, cov1], x$data[!treated, cov2], col = BLUE)
 
     if (smooth) {
       loess_out <- loess.smooth(x$data[treated, cov1], x$data[treated, cov2])
-      lines(loess_out$x, loess_out$y, col = "#E69F00", lwd = 1.5)
+      lines(loess_out$x, loess_out$y, col = ORANGE, lwd = 1.5)
       loess_out <- loess.smooth(x$data[!treated, cov1], x$data[!treated, cov2])
-      lines(loess_out$x, loess_out$y, col = "#56B4E9", lwd = 1.5)
+      lines(loess_out$x, loess_out$y, col = BLUE, lwd = 1.5)
     }
 
     legend('topright', legend = c('control', 'treated'), pch = c(1, 1),
-           col = c('#56B4E9', '#E69F00'))
+           col = c(BLUE, ORANGE))
   }
 }
 
@@ -626,15 +671,15 @@ plot_CATE <- function(malts_out, cov1, condition_on, df, smooth = FALSE) {
 
   if (cov1 %in% malts_out$info$discrete) {
     boxplot(as.formula(paste('CATE ~', cov1)),
-            data = df, col = c('#56B4E9'),
+            data = df, col = c(BLUE),
             xlab = cov1)
   }
   else {
-    plot(df[, cov1], df$CATE, col = "#56B4E9",
+    plot(df[, cov1], df$CATE, col = BLUE,
          ylab = 'CATE', xlab = cov1)
     if (smooth) {
       loess_out <- loess.smooth(df[, cov1], df$CATE)
-      lines(loess_out$x, loess_out$y, lwd = 1.5, col = "#E69F00")
+      lines(loess_out$x, loess_out$y, lwd = 1.5, col = ORANGE)
     }
   }
 }

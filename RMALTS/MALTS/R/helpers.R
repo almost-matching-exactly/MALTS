@@ -1,9 +1,10 @@
-stratified_k_fold <- function(data, k = 5) {
+stratified_k_fold <- function(data, treatment, k = 5) {
   inds <- numeric(nrow(data))
-  treated <- data[[treated]] == 1
+  treated <- data[[treatment]] == 1
   n_t <- sum(treated)
   n_c <- nrow(data) - n_t
   n_t_per_fold <- ceiling(n_t / k)
+  n_c_per_fold <- ceiling(n_c / k)
   inds[treated] <- sample(rep(1:k, n_t_per_fold), n_t, FALSE)
   inds[!treated] <- sample(rep(1:k, n_c_per_fold), n_c, FALSE)
   return(inds)
@@ -103,14 +104,19 @@ objective <- function(M, outcome, treatment, data, K, discrete,
 
 fit <- function(outcome, treatment, data, K, discrete, C, reweight,
                 Dc_T, Dc_C, Dd_T, Dd_C, Y_T, Y_C, ...) {
+
   p <- dim(Dc_T)[1] + dim(Dd_T)[1]
   # p <- ncol(data) - 2
   M_init <- rep.int(1, p)
 
   treatment_ind <- which(colnames(data) == treatment)
   outcome_ind <- which(colnames(data) == outcome)
+  covariates <-
+    colnames(data)[!(colnames(data) %in% c(treatment, outcome, 'missing'))]
 
-  discrete <- (colnames(data))[-c(treatment_ind, outcome_ind)] %in% discrete
+  discrete <- covariates %in% discrete
+
+  # discrete <- (colnames(data))[-c(treatment_ind, outcome_ind)] %in% discrete
   continuous <- !discrete
 
   # Default parameters
@@ -139,7 +145,8 @@ fit <- function(outcome, treatment, data, K, discrete, C, reweight,
                    control = user_control)
 
   M <- res$par
-  names(M) <- setdiff(colnames(data), c(treatment, outcome))
+  # names(M) <- setdiff(colnames(data), c(treatment, outcome))
+  names(M) <- covariates
   Mc <- M[continuous]
   Md <- M[discrete]
   return(list(Mc = Mc, Md = Md, M = M, convergence = res$convergence))

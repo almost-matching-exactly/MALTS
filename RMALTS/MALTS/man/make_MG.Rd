@@ -4,12 +4,19 @@
 \alias{make_MG}
 \title{Create a matched group object}
 \usage{
-make_MG(unit, MALTS_out)
+make_MG(unit, MALTS_out, threshold_n, threshold_p)
 }
 \arguments{
 \item{unit}{Query unit whose matched group is desired}
 
 \item{MALTS_out}{An object of type \code{malts}}
+
+\item{threshold_n, threshold_p}{How often -- across A positive integer
+denoting the number of times -- across multiple runs and multiple
+train-test splits -- a unit must have been matched to another in order to
+be considered within the latter's matched group. \code{threshold_p}
+specifies a proportion and \code{threshold_n} specifies a number of times.
+Defaults to \code{threshold_n = 1}.}
 }
 \value{
 An object of type \code{mg.malts}

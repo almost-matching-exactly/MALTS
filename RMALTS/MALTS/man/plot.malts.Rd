@@ -21,6 +21,9 @@ Plot information about the stretch matrix and CATE estimates after a call to
 }
 \details{
 \code{plot.malts} displays two plots by default. The first shows the diagonal
-entries of the stretch matrix \eqn{M} used to define distance between units;
-the second plots a density estimate of the estimated CATE distribution.
+entries of the stretch matrix \eqn{M} used to define distance between units,
+with boxplots over multiple runs (\code{n_repeats}) and train-test splits
+(\code{n_folds}). The second plots a density estimate of the estimated CATE
+distribution, where the CATEs are (possibly smoothed) averages over multiple
+runs (\code{n_repeats}) or train-test splits (\code{n_folds}).
 }

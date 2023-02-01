@@ -7,7 +7,6 @@
 \usage{
 MALTS(
   data,
-  holdout = 0.1,
   outcome = "outcome",
   treatment = "treated",
   discrete,
@@ -15,9 +14,11 @@ MALTS(
   k_tr = 15,
   k_est = 50,
   reweight = FALSE,
-  estimate_CATEs = FALSE,
+  n_folds = 5,
+  n_repeats = 1,
+  estimate_CATEs = TRUE,
+  smooth_CATEs = TRUE,
   missing_data = c("none", "drop", "impute"),
-  missing_holdout = c("none", "drop", "impute"),
   impute_with_outcome = FALSE,
   impute_with_treatment = FALSE,
   ...
@@ -36,15 +37,6 @@ exclusively, and as multi-class if a factor with more than two levels. If
 the outcome column is omitted, matching will be performed but treatment
 effect estimation will not be possible. All columns not containing outcome
 or treatment will be treated as covariates for matching.}
-
-\item{holdout}{Holdout data to be used to estimate a distance matrix. If a
-numeric scalar between 0 and 1, that proportion of \code{data} will be made
-into a holdout set and only the \emph{remaining proportion} of \code{data}
-will be matched. Otherwise, a data frame or a path to a .csv file. The
-holdout data must contain an outcome column with name
-\code{outcome}; other restrictions on column types are as for
-\code{data}. Covariate columns must have the same column names and order as
-\code{data}. This data will \emph{not} be matched. Defaults to 0.1.}
 
 \item{outcome}{Name of the outcome column in \code{holdout} and
 also in \code{data}, if supplied in the latter. Defaults to 'outcome'.}
@@ -71,17 +63,12 @@ sizes. Defaults to \code{FALSE}.}
 \item{estimate_CATEs}{A logical scalar. If \code{TRUE}, CATEs for each unit
 are estimated throughout the matching procedure, which will be much faster
 than computing them after a call to \code{MALTS} for very large inputs.
-Defaults to \code{FALSE}.}
+Defaults to \code{TRUE}.}
 
 \item{missing_data}{Specifies how to handle missingness in \code{data}. If
 'none' (default), assumes no missing data. If 'drop', effectively drops
 units with missingness from the data and does not match them (they will
 still appear in the matched dataset that is returned, however). If
-'impute', imputes the missing data via \code{mice::mice}.}
-
-\item{missing_holdout}{Specifies how to handle missingness in \code{holdout}.
-If 'none' (default), assumes no missing data; if 'drop', drops units with
-missingness and does not use them to learn a distance matrix; and if
 'impute', imputes the missing data via \code{mice::mice}.}
 
 \item{impute_with_treatment, impute_with_outcome}{A logical scalar. If
@@ -100,9 +87,27 @@ effect.}
 
 \item{linewidth}{Maximum number of characters on line; output will be wrapped
 accordingly.}
+
+\item{holdout}{Holdout data to be used to estimate a distance matrix. If a
+numeric scalar between 0 and 1, that proportion of \code{data} will be made
+into a holdout set and only the \emph{remaining proportion} of \code{data}
+will be matched. Otherwise, a data frame or a path to a .csv file. The
+holdout data must contain an outcome column with name
+\code{outcome}; other restrictions on column types are as for
+\code{data}. Covariate columns must have the same column names and order as
+\code{data}. This data will \emph{not} be matched. Defaults to 0.1.}
+
+\item{repeats}{A positive integer controlling how many times MALTS should be
+run. Defaults to 1.}
+
+\item{missing_holdout}{Specifies how to handle missingness in \code{holdout}.
+If 'none' (default), assumes no missing data; if 'drop', drops units with
+missingness and does not use them to learn a distance matrix; and if
+'impute', imputes the missing data via \code{mice::mice}.}
 }
 \value{
-An object of class \code{malts}.
+An object of class \code{malts}. The \code{weight} column refers to
+the number of matched groups units are included in.
 }
 \description{
 Matching After Learning To Stretch
