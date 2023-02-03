@@ -153,14 +153,13 @@ MALTS <- function(data, outcome = 'outcome', treatment = 'treated',
 
   CATEs <- matrix(NA, nrow = n_folds * n_repeats, ncol = nrow(data))
   for (i in seq_len(n_repeats)) {
-    folds <- stratified_k_fold(data, n_folds)
+    folds <- stratified_k_fold(data, treatment, n_folds)
     for (j in seq_len(n_folds)) {
       ind <- j + (i - 1) * n_folds
       tmp <- MALTS.int(data[folds != j, ], data[folds == j, ],
                        outcome, treatment, discrete, continuous, info,
                        C, k_tr, k_est,
                        reweight, estimate_CATEs)
-
       malts_out$M[ind, ] <- tmp$M
       malts_out$MGs[[ind]] <- tmp$MGs
       CATEs[ind, folds != j] <- tmp$CATEs
@@ -184,15 +183,27 @@ MALTS <- function(data, outcome = 'outcome', treatment = 'treated',
   }
   data$sd_CATE <- sd_CATE
   data$missing <- NULL
+  rownames(data) <- info$original_rownames
+  info$original_rownames <- NULL
   malts_out$data <- data
   malts_out$info <- info
   class(malts_out) <- 'malts'
   return(malts_out)
 }
 
+make_mapping <- function(data) {
+  # Function to return data indices wrt all data, holdout units
+  mapping_fun <- function(x) {
+    return(as.integer(rownames(data)[x]))
+  }
+  return(mapping_fun)
+}
+
 MALTS.int <- function(data, holdout, outcome,
                       treatment, discrete, continuous, info,
                       C, k_tr, k_est, reweight, estimate_CATEs, ...) {
+  map_back <- make_mapping(data)
+
   treated <- holdout[treatment] == 1
   control <- holdout[treatment] == 0
 
@@ -226,7 +237,7 @@ MALTS.int <- function(data, holdout, outcome,
 
   info$convergence <- fit_out$convergence
 
-  n <- nrow(data)
+  n <- nrow(data) + nrow(holdout)
   ##### Should reconsider making discrete correspond to the whole data ######
 
   treated <- data[[treatment]] == 1
@@ -268,7 +279,7 @@ MALTS.int <- function(data, holdout, outcome,
   D_C <- Dc_C + Dd_C
 
   MGs <- vector('list', length = n)
-  # browser()
+
   if (info$estimate_CATEs && info$outcome_type == 'continuous') {
     Tr <- data[[treatment]]
     Y <- data[[outcome]]
@@ -277,10 +288,10 @@ MALTS.int <- function(data, holdout, outcome,
   }
   weights <- numeric(nrow(data))
 
-  for (i in 1:n) {
+  for (i in seq_len(nrow(data))) {
 
     if (data$missing[i]) {
-      MGs[[i]] <- NULL
+      MGs[[map_back(i)]] <- NULL
       if (info$estimate_CATEs && info$outcome_type == 'continuous') {
         CATEs[i] <- NA
       }
@@ -291,7 +302,7 @@ MALTS.int <- function(data, holdout, outcome,
     dists <- D_C[i, ]
     dists[dists == 0 | is.na(dists)] <- Inf
 
-    MG <-  inds_c[dists <= sort(dists, partial = k_est)[k_est]]
+    MG <- inds_c[dists <= sort(dists, partial = k_est)[k_est]]
 
     dists <- D_T[i, ]
     dists[dists == 0 | is.na(dists)] <- Inf
@@ -305,16 +316,9 @@ MALTS.int <- function(data, holdout, outcome,
     }
 
     weights[MG] <- weights[MG] + 1
-
-    MGs[[i]] <- MG
+    MGs[[map_back(i)]] <- sort(map_back(MG))
   }
-
-  # if (info$estimate_CATEs && info$outcome_type %in% c('binary', 'continuous')) {
-  # data$CATE <- CATEs
-  # }
-  # data$weight <- weights
 
   return(list(MGs = MGs, M = M, weights = weights, CATEs = CATEs,
               convergence = fit_out$convergence))
-  # malts_out <- postprocess(data, MGs, M, info)
 }
