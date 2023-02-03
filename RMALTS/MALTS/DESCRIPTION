@@ -1,14 +1,19 @@
 Package: MALTS
-Title: What the Package Does (One Line, Title Case)
+Title: Matching After Learning To Stretch
 Version: 0.0.0.9000
 Authors@R: 
     person(given = "Vittorio",
            family = "Orlandi",
            role = c("aut", "cre"),
            email = "almost.matching.exactly@gmail.com")
-URL: https://almost-matching-exactly.github.io,https://vittorioorlandi.github.io/
-BugReports: https://github.com/almost-matching-exactly/R-MALTS/issues
-Description: What the package does (one paragraph).
+URL: https://almost-matching-exactly.github.io
+BugReports: https://github.com/almost-matching-exactly/MALTS/issues
+Description: Implementation of the Matching After Learning to Stretch (MALTS) 
+    algorithm for observational causal inference (Parikh, Rudin, Volfovsky: JMLR 
+    2022). MALTS learns a distance metric between units that prioritizes
+    variables more predictive of the outcome, matches accordingly, and uses the 
+    resulting matches to estimate Conditional Average Treatment Effects. For 
+    more information and examples, see the Almost-Matching-Exactly website. 
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true

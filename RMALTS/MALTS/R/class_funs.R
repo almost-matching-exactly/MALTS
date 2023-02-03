@@ -40,18 +40,50 @@ convert_nlopt_code <- function(val) {
   }
 }
 
-#' Create a matched group object
+#' Matched Groups from MALTS
 #'
+#' Create, Print, and Plot Matched Groups from a MALTS fit.
 #' @param unit Query unit whose matched group is desired
 #' @param MALTS_out An object of type \code{malts}
-#' @param threshold_n,threshold_p How often -- across A positive integer
-#'   denoting the number of times -- across multiple runs and multiple
+#' @param threshold_n,threshold_p How often -- across multiple runs and multiple
 #'   train-test splits -- a unit must have been matched to another in order to
 #'   be considered within the latter's matched group. \code{threshold_p}
 #'   specifies a proportion and \code{threshold_n} specifies a number of times.
 #'   Defaults to \code{threshold_n = 1}.
+#' @details
 #'
-#' @return An object of type \code{mg.malts}
+#' \code{print.mg.malts} is equivalent to \code{print.summary.mg.malts}, which
+#' displays information about 1. the size of the query unit's matched group and
+#' 2. pruned and unpruned CATE estimates. Unpruned estimates use all the units
+#' the query unit was ever matched to, while pruned estimates only use the units
+#' satisfying the specified thresholds (with equivalence if \code{threshold_n =
+#' 1} or \code{threshold_p = 0}).
+#'
+#' \code{plot.mg.malts} plots information about the joint distribution of two
+#' covariates within a matched group.
+#'
+#' @name MGs
+#' @return \code{make_MG} returns an object of type \code{mg.malts}, which is a
+#' list including the entries:
+#' * data: treatment, outcome, covariate, and CATE information for the units in
+#' the matched group
+#' * query: the unit whose matched group is returned
+#' * threshold: the minimum number of matches required for inclusion in the
+#' matched group. This is the same as \code{threshold_n}, if provided;
+#' otherwise, \code{threshold_p} is converted accordingly.
+#'
+#' All other entries are as for objects of type \code{malts}
+#'
+#' @examples
+#' malts_out <- MALTS(gen_data(n = 500, p = 10), n_folds = 5, n_repeats = 3)
+#' # only including units matched at least 50% of the time
+#' mg <- make_MG(1, malts_out, threshold_p = 0.5)
+#' print(mg)
+#' plot(mg, 1, 2)
+#'
+NULL
+#> NULL
+#' @rdname MGs
 #' @export
 make_MG <- function(unit, MALTS_out, threshold_n, threshold_p) {
 
@@ -59,13 +91,13 @@ make_MG <- function(unit, MALTS_out, threshold_n, threshold_p) {
     stop('Only one of `threshold_n` and `threshold_p` can be supplied.')
   }
   if (!missing(threshold_p)) {
-    threshold <- threshold_p * length(MALTS_out$MGs)
+    # ignoring folds where you were only used for estimation
+    times_matched <- sum(sapply(mout$MGs, function(x) !is.null(x[[1]])))
+    threshold <- threshold_p * times_matched
   }
   else {
     threshold <- ifelse(missing(threshold_n), 1, threshold_n)
   }
-
-  # Rownames thing...
 
   # All MGs of that unit
   MGs <- lapply(MALTS_out$MGs, function(x) x[[unit]])
@@ -94,6 +126,7 @@ make_MG <- function(unit, MALTS_out, threshold_n, threshold_p) {
 #' accordingly.
 #'
 #' @export
+#' @rdname MGs
 print.mg.malts <-
   function(x, digits = getOption('digits'), linewidth = 80, ...) {
   print(summary.mg.malts(x), digits = digits, linewidth = linewidth, ...)
@@ -105,6 +138,7 @@ print.mg.malts <-
 #' @param ... Additional arguments to be passed on to other methods. Not used.
 #'
 #' @return
+#' @rdname MGs
 #' @export
 summary.mg.malts <- function(object, ...) {
 
@@ -159,7 +193,7 @@ summary.mg.malts <- function(object, ...) {
 
   if (object$info$outcome_type == 'continuous') {
     out$CATE_pruned <- mean(Y[Tr == 1]) - mean(Y[Tr == 0])
-    out$CATE_unpruned <- object$data$CATE[rownames(object$data) == object$query]
+    out$CATE_unpruned <- object$data$CATE[object$query]
   }
   out$threshold <- object$threshold
   out$query <- object$query
@@ -174,7 +208,7 @@ summary.mg.malts <- function(object, ...) {
 #' @param digits Number of significant digits for printing.
 #' @param linewidth Maximum number of characters on line; output will be wrapped
 #' accordingly.
-#'
+#' @rdname MGs
 #' @export
 print.summary.mg.malts <-
   function(x, digits = getOption('digits'), linewidth = 80, ...) {
@@ -335,29 +369,36 @@ print.malts <- function(x, digits = getOption('digits'), linewidth = 80, ...) {
   n_convergence_types <- table(x$info$convergence)
   cat('  Optimization stopped', '\n')
   for (i in seq_along(n_convergence_types)) {
-    cat(paste('   ', n_convergence_types[i], 'times due to:',
-              convert_nlopt_code(as.integer(names(n_convergence_types[i])))),
+    times <- n_convergence_types[i]
+    cat(paste('   ', times, ifelse(times == 1, 'time', 'times'), 'due to:',
+              convert_nlopt_code(as.integer(names(times)))),
         '\n')
   }
 
-  # cat(paste('  Reason for stopping:', convert_nlopt_code(x$info$convergence)),
-  #     '\n')
+  if (outcome_type == 'continuous' & x$info$estimate_CATEs) {
 
-  #######
-
-  if (outcome_type == 'continuous') {
     cat(strwrap(paste0('  The average treatment effect of `',
                        x$info$treatment, '` on `', x$info$outcome,
                        '` is estimated to be ',
-                       round(ifelse(x$info$estimate_CATEs &&
-                                      outcome_type == 'continuous',
-                                    mean(x$data$CATE, na.rm = TRUE),
-                                    get_average_effects(x)['All', 'Mean']),
+                       round(mean(x$data$CATE, na.rm = TRUE),
                              digits = digits),
                        '.'),
                 width = linewidth, indent = indentation, exdent = indentation),
         sep = '\n ')
   }
+  # if (outcome_type == 'continuous') {
+  #   cat(strwrap(paste0('  The average treatment effect of `',
+  #                      x$info$treatment, '` on `', x$info$outcome,
+  #                      '` is estimated to be ',
+  #                      round(ifelse(x$info$estimate_CATEs &&
+  #                                     outcome_type == 'continuous',
+  #                                   mean(x$data$CATE, na.rm = TRUE),
+  #                                   get_average_effects(x)['All', 'Mean']),
+  #                            digits = digits),
+  #                      '.'),
+  #               width = linewidth, indent = indentation, exdent = indentation),
+  #       sep = '\n ')
+  # }
 
   if (x$info$missing_data == 'drop') {
     missing_data_message <-
@@ -383,25 +424,12 @@ print.malts <- function(x, digits = getOption('digits'), linewidth = 80, ...) {
 # MG Diameters: min, max, median / mean
   # diameter is max distance between query unit and other units in MG
 
-
-
-#' Plot information about a MALTS fit
-#'
-#' Plot information about the stretch matrix and CATE estimates after a call to
-#' \code{MALTS}.
-#'
-#' \code{plot.malts} displays two plots by default. The first shows the diagonal
-#' entries of the stretch matrix \eqn{M} used to define distance between units,
-#' with boxplots over multiple runs (\code{n_repeats}) and train-test splits
-#' (\code{n_folds}). The second plots a density estimate of the estimated CATE
-#' distribution, where the CATEs are (possibly smoothed) averages over multiple
-#' runs (\code{n_repeats}) or train-test splits (\code{n_folds}).
-#'
 #' @param x An object of class \code{malts}, returned by a call to
 #'   \code{\link{MALTS}}.
 #' @param which_plots A vector describing which plots should be displayed. See
 #' details.
 #' @param ... Additional arguments to passed on to other methods.
+#' @rdname MALTS
 #' @export
 plot.malts <- function(x, which_plots = c(1, 2), ...) {
 
@@ -487,18 +515,13 @@ plot.malts <- function(x, which_plots = c(1, 2), ...) {
 
 #' Plot a Matched Group
 #'
-#' Plot information about a matched group after a call to \code{MG}.
-#'
-#' \code{plot.mg.malts} displays information about the joint distribution of two
-#' covariates within a matched group.
-#'
 #' @param x An object of type \code{mg.malts}, returned by a call to \code{MG}.
 #' @param cov1,cov2 Covariates, specified either by indices or column names in
 #'   \code{x$data} to plot against.
 #' @param smooth A logical scalar denoting whether smoothed loess estimates
 #'   should be added to the plots. Defaults to \code{FALSE}.
 #' @param ... Additional arguments to be passed on to other methods.
-#'
+#' @rdname MGs
 #' @export
 plot.mg.malts <- function(x, cov1, cov2, smooth = FALSE, ...) {
 
@@ -585,13 +608,10 @@ plot.mg.malts <- function(x, cov1, cov2, smooth = FALSE, ...) {
   }
 }
 
-
-#' Plot CATEs by Covariate
-#'
-#' @param malts_out An object of class \code{malts}, returned by a call to
+#' @param x An object of class \code{malts}, returned by a call to
 #'   \code{MALTS}.
 #' @param cov1 The variable that CATEs should be plotted against. Either an
-#'   index of \code{malts_out$data} corresponding to a covariate or an
+#'   index of \code{x$data} corresponding to a covariate or an
 #'   appropriate column name.
 #' @param condition_on A named vector describing what variables to condition on
 #'   when plotting CATEs. Names correspond to the variables and how they should
@@ -601,30 +621,27 @@ plot.mg.malts <- function(x, cov1, cov2, smooth = FALSE, ...) {
 #'   "<=", ">", ">=", "==", and "!=",  as well as "=" and "", which are
 #'   interpreted as "==". See examples.
 #' @param df A data frame from which CATEs and the corresponding covariate
-#'   values are taken to be plotted instead of \code{malts_out$data}. Useful if
+#'   values are taken to be plotted instead of \code{x$data}. Useful if
 #'   more complex filtering than permitted by \code{condition_on} is desired.
 #' @param smooth A logical scalar, denoting whether a LOESS curve should be fit
 #'   to the covariate-CATE data if \code{cov1} is continuous. Defaults to FALSE.
-#'
-#' @return
+#' @rdname MALTS
 #' @export
-#'
-#' @examples
-plot_CATE <- function(malts_out, cov1, condition_on, df, smooth = FALSE) {
+plot_CATE <- function(x, cov1, condition_on, df, smooth = FALSE) {
   if (!missing(condition_on) & !missing(df)) {
     stop('Only one of `condition_on` or `df` can be specified')
   }
 
   # && instead of & to short circuit
   if ((!missing(df) && !('CATE' %in% colnames(df))) |
-      (missing(df) && !('CATE' %in% colnames(malts_out$data)))) {
+      (missing(df) && !('CATE' %in% colnames(x$data)))) {
     stop("CATEs have not been computed")
   }
 
   # support for < and > not just <= >=
   # should smoothed estimates be computed based off the whole data or no?
   if (!missing(condition_on)) {
-    df <- malts_out$data
+    df <- x$data
     conditioning_vars <- names(condition_on)
     for (i in seq_along(condition_on)) {
       v <- conditioning_vars[i]
@@ -662,14 +679,14 @@ plot_CATE <- function(malts_out, cov1, condition_on, df, smooth = FALSE) {
     }
   }
   if (missing(df)) {
-    df <- malts_out$data
+    df <- x$data
   }
 
   if (is.numeric(cov1)) {
     cov1 <- colnames(df)[cov1]
   }
 
-  if (cov1 %in% malts_out$info$discrete) {
+  if (cov1 %in% x$info$discrete) {
     boxplot(as.formula(paste('CATE ~', cov1)),
             data = df, col = c(BLUE),
             xlab = cov1)
@@ -731,12 +748,16 @@ NULL
 summary.malts <- function(object, ...) {
   summary_obj <- list()
   if (object$info$outcome_type == 'continuous') {
-    average_effects <- get_average_effects(object)
-    summary_obj$TEs <- average_effects
+    # average_effects <- get_average_effects(object)
+    # summary_obj$TEs <- average_effects
+    summary_obj$ATE <- mean(object$data$CATE)
   }
 
-  stretch_d <- object$M[object$info$discrete]
-  stretch_c <- object$M[!(names(object$M) %in% object$info$discrete)]
+  # average stretches
+  M <- colMeans(object$M)
+
+  stretch_d <- M[object$info$discrete]
+  stretch_c <- M[!(names(M) %in% object$info$discrete)]
 
   stretches <- list()
   if (length(object$info$discrete) > 0) {
@@ -746,7 +767,7 @@ summary.malts <- function(object, ...) {
                                     c(names(stretch_d)[which.min(stretch_d)],
                                       names(stretch_d)[which.max(stretch_d)]))))
   }
-  if (length(object$info$discrete) < length(mout$M)) {
+  if (length(object$info$discrete) < length(M)) {
     stretches <-
       c(stretches,
         list('continuous' = setNames(range(stretch_c),
@@ -762,7 +783,7 @@ summary.malts <- function(object, ...) {
   #        'continuous' = setNames(range(stretch_c),
   #                                c(names(stretch_c)[which.min(stretch_c)],
   #                                  names(stretch_c)[which.max(stretch_c)])))
-
+  summary_obj$info <- object$info
   class(summary_obj) <- 'summary.malts'
   return(summary_obj)
 }
@@ -780,6 +801,16 @@ print.summary.malts <- function(x, digits = 3, ...) {
   max_meanlen <- 7
   max_varlen <- 8
   lablen <- 13
+
+  if ('ATE' %in% names(x)) {
+    cat(strwrap(paste0('  The average treatment effect of `',
+                       x$info$treatment, '` on `', x$info$outcome,
+                       '` is estimated to be ',
+                       round(mean(x$ATE, na.rm = TRUE), digits = digits),
+                       '.'),
+                width = 80, indent = 2, exdent = 2),
+        sep = '\n ')
+  }
 
   if ('TEs' %in% names(x)) {
 
@@ -824,37 +855,67 @@ print.summary.malts <- function(x, digits = 3, ...) {
                  digits = digits, width = max_varlen, justify = 'right'),
           '\n')
     }
+  }
 
-    if ('discrete' %in% names(x$stretch)) {
-      stretch_d <- x$stretch$discrete
-    }
-    if ('continuous' %in% names(x$stretch)) {
-      stretch_c <- x$stretch$continuous
-    }
+  if ('discrete' %in% names(x$stretch)) {
+    stretch_d <- x$stretch$discrete
+  }
+  if ('continuous' %in% names(x$stretch)) {
+    stretch_c <- x$stretch$continuous
+  }
 
-    cat('\nStretch Values:\n')
-    cat(format('', width = lablen),
-        format('Minimum', width = max_meanlen, justify = 'right'),
-        format('Maximum', width = max_varlen, justify = 'right'),
-        '\n')
+  cat('\nAverage Stretch Values:\n')
 
-    if ('discrete' %in% names(x$stretch)) {
-      cat(format('  Discrete', width = lablen),
-          format(paste0(format(stretch_d[1], digits = digits), ' (', names(stretch_d)[1], ')'),
-                 width = max_meanlen, justify = 'right'),
-          format(paste0(format(stretch_d[2], digits = digits), ' (', names(stretch_d)[2], ')'),
-                 width = max_varlen, justify = 'right'),
-          '\n')
-    }
+  min_d_strlen <- -1
+  min_c_strlen <- -1
+  pad <- 2
+  if ('discrete' %in% names(x$stretch)) {
+    min_d_str <- paste0(format(stretch_d[1], digits = digits),
+                               ' (', names(stretch_d)[1], ') ')
+    min_d_strlen <- nchar(min_d_str)
 
-    if ('continuous' %in% names(x$stretch)) {
-      cat(format('  Continuous', width = lablen),
-          format(paste0(format(stretch_c[1], digits = digits), ' (', names(stretch_c)[1], ')'),
-                 width = max_meanlen, justify = 'right'),
-          format(paste0(format(stretch_c[2], digits = digits), ' (', names(stretch_c)[2], ')'),
-                 width = max_varlen, justify = 'right'),
-          '\n')
-    }
+    max_d_str <- paste0(format(stretch_d[2], digits = digits),
+                               ' (', names(stretch_d)[2], ') ')
+
+    n_pre_Minimum <- pad + nchar('Discrete ')
+  }
+  if ('continuous' %in% names(x$stretch)) {
+    min_c_str <- paste0(format(stretch_c[1], digits = digits),
+                        ' (', names(stretch_c)[1], ') ')
+    min_c_strlen <- nchar(min_c_str)
+
+    max_c_str <- paste0(format(stretch_c[2], digits = digits),
+                               ' (', names(stretch_c)[2], ') ')
+
+    n_pre_Minimum <- pad + nchar('Continuous ')
+  }
+
+  # chars from start of line to "Maximum"
+  n_pre_Maximum <- n_pre_Minimum + max(min_c_strlen, min_d_strlen)
+  # chars between end of "Minimum", start of "Maximum
+  n_Min_Max <- max(min_c_strlen, min_d_strlen)
+
+  cat(paste0(rep(' ', n_pre_Minimum), collapse = ''),
+      'Minimum',
+      paste0(rep(' ', n_pre_Maximum - n_pre_Minimum - nchar('Minimum')), collapse = ''),
+      'Maximum',
+      '\n', sep = '')
+
+  if ('continuous' %in% names(x$stretch)) {
+    cat(strrep(' ', pad), 'Continuous ',
+        min_c_str,
+        strrep(' ', n_Min_Max - min_c_strlen),
+        max_c_str, '\n',
+        sep = '')
+  }
+
+  if ('discrete' %in% names(x$stretch)) {
+    cat(strrep(' ', pad), 'Discrete',
+        strrep(' ', n_pre_Minimum - nchar('Discrete') - pad),
+        min_d_str,
+        strrep(' ', n_Min_Max - min_d_strlen),
+        max_d_str, '\n',
+        sep = '')
   }
 }
 

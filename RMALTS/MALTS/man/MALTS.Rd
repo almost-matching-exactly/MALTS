@@ -3,6 +3,8 @@
 \name{MALTS}
 \alias{MALTS}
 \alias{print.malts}
+\alias{plot.malts}
+\alias{plot_CATE}
 \title{Matching After Learning To Stretch}
 \usage{
 MALTS(
@@ -25,6 +27,10 @@ MALTS(
 )
 
 \method{print}{malts}(x, digits = getOption("digits"), linewidth = 80, ...)
+
+\method{plot}{malts}(x, which_plots = c(1, 2), ...)
+
+plot_CATE(x, cov1, condition_on, df, smooth = FALSE)
 }
 \arguments{
 \item{data}{Data to be matched. Either a data frame or a path to a .csv file
@@ -60,10 +66,24 @@ treated units are included in each group.}
 should be reweighted during training, according to their respective samples
 sizes. Defaults to \code{FALSE}.}
 
-\item{estimate_CATEs}{A logical scalar. If \code{TRUE}, CATEs for each unit
-are estimated throughout the matching procedure, which will be much faster
-than computing them after a call to \code{MALTS} for very large inputs.
-Defaults to \code{TRUE}.}
+\item{n_repeats, n_folds}{Integers controlling how many times the MALTS
+algorithm should be run. The tasks of 1. distance metric learning and 2.
+matching are performed \code{n_folds x n_repeats} many times. In each run
+(corresponding to \code{n_repeats}), the data is randomly split into
+\code{n_folds} many folds. Each fold is used once for distance metric
+learning and the remainder of the time for matching.}
+
+\item{estimate_CATEs, smooth_CATEs}{Logical scalars determining: 1. if CATEs
+should be estimated from the matched data and 2. if so, whether the CATEs
+should be smoothed. For very large inputs, estimating CATEs in the call to
+\code{MALTS} will be much faster than computing them after the fact. If no
+smoothing is done, estimated CATEs are averages across the CATEs yielded by
+different stretch matrices and the associated standard deviations are
+sample standard deviations. Otherwise, smoothing is done via linear mean /
+quantile regression. The estimated CATEs are the fitted values from the
+mean regression of the unsmoothed CATE estimates on the covariates. The
+associated standard deviation is given by 1/4 the difference between the
+fitted values from 5\% and 95\% quantile regressions of the same form.}
 
 \item{missing_data}{Specifies how to handle missingness in \code{data}. If
 'none' (default), assumes no missing data. If 'drop', effectively drops
@@ -71,16 +91,15 @@ units with missingness from the data and does not match them (they will
 still appear in the matched dataset that is returned, however). If
 'impute', imputes the missing data via \code{mice::mice}.}
 
-\item{impute_with_treatment, impute_with_outcome}{A logical scalar. If
+\item{impute_with_treatment, impute_with_outcome}{Logical scalars. If
 \code{TRUE}, uses treatment, outcome, respectively, to impute covariates
 when either \code{missing_data} or \code{missing_holdout} are \code{TRUE}.
-Default to \code{TRUE}, \code{FALSE}, respectively. \code{missing_holdout =
-  2}. Defaults to \code{TRUE}.}
+Default to \code{TRUE}, \code{FALSE}, respectively.}
 
-\item{...}{Additional arguments to be passed to other methods.}
+\item{...}{Additional arguments to passed on to other methods.}
 
 \item{x}{An object of class \code{malts}, returned by a call to
-\code{\link{MALTS}}.}
+\code{MALTS}.}
 
 \item{digits}{Number of significant digits for printing the average treatment
 effect.}
@@ -88,30 +107,76 @@ effect.}
 \item{linewidth}{Maximum number of characters on line; output will be wrapped
 accordingly.}
 
-\item{holdout}{Holdout data to be used to estimate a distance matrix. If a
-numeric scalar between 0 and 1, that proportion of \code{data} will be made
-into a holdout set and only the \emph{remaining proportion} of \code{data}
-will be matched. Otherwise, a data frame or a path to a .csv file. The
-holdout data must contain an outcome column with name
-\code{outcome}; other restrictions on column types are as for
-\code{data}. Covariate columns must have the same column names and order as
-\code{data}. This data will \emph{not} be matched. Defaults to 0.1.}
+\item{which_plots}{A vector describing which plots should be displayed. See
+details.}
 
-\item{repeats}{A positive integer controlling how many times MALTS should be
-run. Defaults to 1.}
+\item{cov1}{The variable that CATEs should be plotted against. Either an
+index of \code{x$data} corresponding to a covariate or an
+appropriate column name.}
 
-\item{missing_holdout}{Specifies how to handle missingness in \code{holdout}.
-If 'none' (default), assumes no missing data; if 'drop', drops units with
-missingness and does not use them to learn a distance matrix; and if
-'impute', imputes the missing data via \code{mice::mice}.}
+\item{condition_on}{A named vector describing what variables to condition on
+when plotting CATEs. Names correspond to the variables and how they should
+be filtered and values correspond to what values they should be filtered
+with respect to. For example c("X1<=" = 5, "X2==" = 0) only plots CATEs for
+those units satisfying X1 <= 5 and X2 == 0. Accepted operators are "<",
+"<=", ">", ">=", "==", and "!=",  as well as "=" and "", which are
+interpreted as "==". See examples.}
+
+\item{df}{A data frame from which CATEs and the corresponding covariate
+values are taken to be plotted instead of \code{x$data}. Useful if
+more complex filtering than permitted by \code{condition_on} is desired.}
+
+\item{smooth}{A logical scalar, denoting whether a LOESS curve should be fit
+to the covariate-CATE data if \code{cov1} is continuous. Defaults to FALSE.}
 }
 \value{
-An object of class \code{malts}. The \code{weight} column refers to
-the number of matched groups units are included in.
+An object of class \code{malts}, which is a list of four entries:
+\itemize{
+\item data: The originally supplied data, with additional \code{CATE} and \code{sd_CATE}
+columns, as per the \code{estimate_CATEs} and \code{smooth_CATEs} arguments.
+\item M: A matrix whose columns refer to different covariates and whose rows
+correspond to their stretch values in the stretch matrix M across different
+runs of the MALTS algorithm (as determined by \code{n_repeats} and
+\code{n_folds}).
+\item MGs: A list of matched groups with each entry corresponding to matches
+formed under a different stretch matrix (as determined by \code{n_repeats}
+and \code{n_folds}). \code{MGs[[i]][[j]]} is a vector of the units matched to
+\code{j} according the \code{i}'th stretch matrix.
+\item info: Miscellaneous information about the call to \code{MALTS} and
+associated output.
+}
 }
 \description{
-Matching After Learning To Stretch
+Implementation of the Matching After Learning To Stretch (MALTS) algorithm.
+}
+\details{
+\code{MALTS} implements the Matching After Learning To Stretch algorithm of
+Parikh, Rudin, and Volfovsky (JMLR 2022), which solves an optimization
+problem to learn a distance metric / stretch matrix for units that
+prioritizes variables more predictive of the outcome and then matches
+accordingly. Additional details can be found in the paper
+\href{https://www.jmlr.org/papers/volume23/21-0053/21-0053.pdf}{here}. In
+this implementation, the data is split into \code{n_folds} many folds, with
+each fold being used once to learn the distance metric and the remainder of
+the time to match the units therein. This entire procedure is repeated
+\code{n_repeats} times, generating a total of \code{n_folds x n_repeats} many
+stretch matrices and matched groups for each unit. All the conditional
+average treatment effects (CATEs) from different stretch matrices are
+averaged together prior to being returned and can further be
+regression-smoothed via \code{smooth_CATEs}.
+
+\code{print.malts} gives information about convergence of the optimization
+and an estimate of the average treatment effect.
+
+\code{plot.malts} displays two plots by default. The first shows the diagonal
+entries of the stretch matrix \eqn{M} used to define distance between units,
+with boxplots over multiple runs (\code{n_repeats}) and train-test splits
+(\code{n_folds}). The second plots a density estimate of the estimated CATE
+distribution, where the CATEs are (possibly smoothed) averages over multiple
+runs (\code{n_repeats}) or train-test splits (\code{n_folds}).
 }
 \examples{
 malts_out <- MALTS(gen_data(n = 500, p = 10))
+print(malts_out)
+plot(malts_out)
 }

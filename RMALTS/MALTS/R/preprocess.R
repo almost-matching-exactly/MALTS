@@ -64,5 +64,8 @@ preprocess <- function(data, treated_column_name, outcome_column_name,
   # tmp_df$MG <- rep(0, n)
   # data$CATE <- rep(NA, n)
 
+  original_rownames <- rownames(data)
+  info$original_rownames <- original_rownames
+  rownames(data) <- seq_len(nrow(data))
   return(list(data = data, info = info))
 }

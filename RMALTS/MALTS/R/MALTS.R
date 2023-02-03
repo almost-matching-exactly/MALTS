@@ -1,4 +1,7 @@
 #' Matching After Learning To Stretch
+#'
+#' Implementation of the Matching After Learning To Stretch (MALTS) algorithm.
+#'
 #' @param data Data to be matched. Either a data frame or a path to a .csv file
 #'   to be read into a data frame. Treatment must be described by a logical or
 #'   binary numeric column with name \code{treated_column_name}. If supplied,
@@ -9,14 +12,6 @@
 #'   the outcome column is omitted, matching will be performed but treatment
 #'   effect estimation will not be possible. All columns not containing outcome
 #'   or treatment will be treated as covariates for matching.
-#' @param holdout Holdout data to be used to estimate a distance matrix. If a
-#'   numeric scalar between 0 and 1, that proportion of \code{data} will be made
-#'   into a holdout set and only the \emph{remaining proportion} of \code{data}
-#'   will be matched. Otherwise, a data frame or a path to a .csv file. The
-#'   holdout data must contain an outcome column with name
-#'   \code{outcome}; other restrictions on column types are as for
-#'   \code{data}. Covariate columns must have the same column names and order as
-#'   \code{data}. This data will \emph{not} be matched. Defaults to 0.1.
 #' @param outcome Name of the outcome column in \code{holdout} and
 #'   also in \code{data}, if supplied in the latter. Defaults to 'outcome'.
 #' @param treatment Name of the treatment column in \code{data} and
@@ -33,39 +28,87 @@
 #' @param reweight A logical scalar denoting if treated and control groups
 #'   should be reweighted during training, according to their respective samples
 #'   sizes. Defaults to \code{FALSE}.
-#' @param n_repeats A positive integer controlling how many times MALTS should be
-#'   run. Defaults to 1.
-#' @param estimate_CATEs A logical scalar. If \code{TRUE}, CATEs for each unit
-#'   are estimated throughout the matching procedure, which will be much faster
-#'   than computing them after a call to \code{MALTS} for very large inputs.
-#'   Defaults to \code{TRUE}.
+#' @param n_repeats,n_folds Integers controlling how many times the MALTS
+#'   algorithm should be run. The tasks of 1. distance metric learning and 2.
+#'   matching are performed \code{n_folds x n_repeats} many times. In each run
+#'   (corresponding to \code{n_repeats}), the data is randomly split into
+#'   \code{n_folds} many folds. Each fold is used once for distance metric
+#'   learning and the remainder of the time for matching.
+#' @param estimate_CATEs,smooth_CATEs Logical scalars determining: 1. if CATEs
+#'   should be estimated from the matched data and 2. if so, whether the CATEs
+#'   should be smoothed. For very large inputs, estimating CATEs in the call to
+#'   \code{MALTS} will be much faster than computing them after the fact. If no
+#'   smoothing is done, estimated CATEs are averages across the CATEs yielded by
+#'   different stretch matrices and the associated standard deviations are
+#'   sample standard deviations. Otherwise, smoothing is done via linear mean /
+#'   quantile regression. The estimated CATEs are the fitted values from the
+#'   mean regression of the unsmoothed CATE estimates on the covariates. The
+#'   associated standard deviation is given by 1/4 the difference between the
+#'   fitted values from 5% and 95% quantile regressions of the same form.
 #' @param missing_data Specifies how to handle missingness in \code{data}. If
 #'   'none' (default), assumes no missing data. If 'drop', effectively drops
 #'   units with missingness from the data and does not match them (they will
 #'   still appear in the matched dataset that is returned, however). If
 #'   'impute', imputes the missing data via \code{mice::mice}.
-#' @param missing_holdout Specifies how to handle missingness in \code{holdout}.
-#'   If 'none' (default), assumes no missing data; if 'drop', drops units with
-#'   missingness and does not use them to learn a distance matrix; and if
-#'   'impute', imputes the missing data via \code{mice::mice}.
-#' @param impute_with_treatment,impute_with_outcome A logical scalar. If
+#' @param impute_with_treatment,impute_with_outcome Logical scalars. If
 #'   \code{TRUE}, uses treatment, outcome, respectively, to impute covariates
 #'   when either \code{missing_data} or \code{missing_holdout} are \code{TRUE}.
-#'   Default to \code{TRUE}, \code{FALSE}, respectively. \code{missing_holdout =
-#'   2}. Defaults to \code{TRUE}.
+#'   Default to \code{TRUE}, \code{FALSE}, respectively.
 #' @param ... A  named list of additional arguments to be passed to
 #'   \code{nloptr::cobyla}. These control the details of the optimization
 #'   procedure, such as a maximum number of evaluations and convergence
-#'   tolerance. MALTS defaults are \code{maxeval = 500} and
+#'   tolerance. \code{MALTS} defaults are \code{maxeval = 500} and
 #'   \code{xtol_rel = 1e-4}, with all other terms set to \code{nloptr} defaults.
 #'   For more details, see \code{nloptr::nl.opts}.
 #'
+#' @details
+#' \code{MALTS} implements the Matching After Learning To Stretch algorithm of
+#' Parikh, Rudin, and Volfovsky (JMLR 2022), which solves an optimization
+#' problem to learn a distance metric / stretch matrix for units that
+#' prioritizes variables more predictive of the outcome and then matches
+#' accordingly. Additional details can be found in the paper
+#' \href{https://www.jmlr.org/papers/volume23/21-0053/21-0053.pdf}{here}. In
+#' this implementation, the data is split into \code{n_folds} many folds, with
+#' each fold being used once to learn the distance metric and the remainder of
+#' the time to match the units therein. This entire procedure is repeated
+#' \code{n_repeats} times, generating a total of \code{n_folds x n_repeats} many
+#' stretch matrices and matched groups for each unit. All the conditional
+#' average treatment effects (CATEs) from different stretch matrices are
+#' averaged together prior to being returned and can further be
+#' regression-smoothed via \code{smooth_CATEs}.
+#'
+#' \code{print.malts} gives information about convergence of the optimization
+#' and an estimate of the average treatment effect.
+#'
+#' \code{plot.malts} displays two plots by default. The first shows the diagonal
+#' entries of the stretch matrix \eqn{M} used to define distance between units,
+#' with boxplots over multiple runs (\code{n_repeats}) and train-test splits
+#' (\code{n_folds}). The second plots a density estimate of the estimated CATE
+#' distribution, where the CATEs are (possibly smoothed) averages over multiple
+#' runs (\code{n_repeats}) or train-test splits (\code{n_folds}).
+#'
+#' \code{plot_CATE} plots estimated CATEs against a feature of choice, allowing
+#' for conditioning on a subset of the data.
+#'
 #' @name MALTS
-#' @return An object of class \code{malts}. The \code{weight} column refers to
-#'   the number of matched groups units are included in.
+#' @return An object of class \code{malts}, which is a list of four entries:
+#' * data: The originally supplied data, with additional `CATE` and `sd_CATE`
+#' columns, as per the \code{estimate_CATEs} and \code{smooth_CATEs} arguments.
+#' * M: A matrix whose columns refer to different covariates and whose rows
+#' correspond to their stretch values in the stretch matrix M across different
+#' runs of the MALTS algorithm (as determined by \code{n_repeats} and
+#' \code{n_folds}).
+#' * MGs: A list of matched groups with each entry corresponding to matches
+#' formed under a different stretch matrix (as determined by \code{n_repeats}
+#' and \code{n_folds}). \code{MGs[[i]][[j]]} is a vector of the units matched to
+#' \code{j} according the \code{i}'th stretch matrix.
+#' * info: Miscellaneous information about the call to \code{MALTS} and
+#' associated output.
 #'
 #' @examples
 #' malts_out <- MALTS(gen_data(n = 500, p = 10))
+#' print(malts_out)
+#' plot(malts_out)
 #' @importFrom stats model.matrix predict rbinom rnorm var complete.cases median
 #'   density
 #' @importFrom utils flush.console read.csv write.csv
