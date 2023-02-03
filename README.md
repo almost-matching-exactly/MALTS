@@ -563,26 +563,30 @@ MG1[MG1>1].sort_values(ascending=False).plot(kind='bar',figsize=(20,5)) #Visuali
 
 **R**
 
-Matched groups can be found in the `MGs` entry of the output of `MALTS`. 
+Matched groups can be found in the `MGs` entry of the output of `MALTS`.
+Entries correspond to different folds being used for distance metric estimation vs. matching.
 ```R
-# Matched group of first unit
-# m$MGs[[1]]
+# Matched group of first unit in first split.
+# m$MGs[[1]][[1]]
+
+# Matched group of third unit in second split. 
+# m$MGs[[2]][[3]]
 ```
 
 Additional information on matched groups can be found by creating and printing 
-an object of type `mg.malts`:
+objects of type `mg.malts`:
 ```R
-mg <- make_MG(1, m)
+# Only include units matching at least 3 times in the matched group
+mg <- make_MG(1, m, threshold_n = 3)
+
+# Unpruned CATEs are computed with respect to all units ever matched. 
+# Pruned CATEs are computed only with respect to the thresholded units.
 print(mg)
 ```
-    The main matched group of unit 1355:
-      Matched to 100 units, 50 treated and 50 control.
-      The estimated CATE is: 68.7998289.
-    
-    Matched Group Diameters:
-      Minimum    4.075537 
-      Median     9.627976 
-      Maximum    24.24158 
+    The main matched group of unit 1:
+      Matched to 88 units, 45 treated and 43 control.
+      The unpruned CATE estimate is: 70.40668.
+      The pruned CATE estimate (with a threshold of 3) is: 70.1119176.
 
 ## Treatment Effect Estimates
 
@@ -706,7 +710,7 @@ ATE
 
 **R**
 ```R
-head(m$data[, c('CATE', 'outcome', 'treated', 'weight')])
+head(m$data[, c('CATE', 'sd_CATE', 'outcome', 'treated')])
 summary(m)
 ```
 
@@ -725,59 +729,56 @@ summary(m)
   <tbody>
     <tr>
       <th>1355</th>
-      <td>70.906045</td>
+      <td>72.734244</td>
+      <td>3.467431</td>
       <td>-15.679894</td>
       <td>0</td>
-      <td>36</td>
     </tr>
     <tr>
       <th>1320</th>   
-      <td>28.225496</td>
+      <td>28.543205</td>
+      <td>3.498173 </td>
       <td>-7.068587 </td>
       <td>0</td>
-      <td>93</td>
     </tr>
     <tr>
       <th>1233</th>
-      <td>28.303075</td>
+      <td>26.917941</td>
+      <td>4.022228</td>
       <td>-5.133200</td>
       <td>0</td>
-      <td>12</td>
     </tr>
     <tr>
       <th>706</th>
-      <td>51.583478</td>
+      <td>52.258803</td>
+      <td>4.115889</td>
       <td>39.684984</td>
       <td>1</td>
-      <td>35</td>
     </tr>
     <tr>
       <th>438</th>
-      <td>6.905143</td>
+      <td>6.766184</td>
+      <td>4.370843</td>
       <td>-2.954324</td>
       <td>0</td>
-      <td>76</td>
     </tr>
     <tr>
       <th>184</th>
-      <td>17.845249</td>
+      <td>19.066282</td>
+      <td>5.476048</td>
       <td>-6.901449</td>
       <td>0</td>
-      <td>65</td>
     </tr>
   </tbody>
 </table>
 </div>
 
-    Average Treatment Effects:
-                 Mean Variance 
-      All            41.4    0.963 
-      Treated        43.9     1.19 
-      Control        40.5    0.978 
+    The average treatment effect of `treated` on `outcome` is estimated to be
+    41.262.
 
-    Stretch Values:
-                    Minimum      Maximum 
-        Continuous  0.0608 (X17) 2.86 (X3) 
+     Average Stretch Values:
+                 Minimum    Maximum
+      Continuous 0.151 (X9) 2.46 (X7)
 
 
 
@@ -793,10 +794,10 @@ summary(m)
 | Loss regularization        | `C`                      | `C`                                                                         |
 | Matched group sizes        | `k_tr`, `k_est`            | `k_tr`, `k_est`                                                               |
 | Reweighting                | `reweight`               | `reweight`                                                                  |
-| CATE Smoothing             | `smooth_CATE`, `estimator` | NA                                                                        |
-| Refitting                  | `n_repeats`              | NA                                                                        |
+| CATE Smoothing             | `smooth_CATE`, `estimator` | `smooth_CATE`, NA                                                                        |
+| Refitting                  | `n_repeats`, `n_folds`              | `n_repeats`, `n_folds`                                                                      |
 | CATE data frame formatting | `output_format`          | NA                                                                        |
-| Missing data handling      | NA                     | `missing_data`, `missing_holdout`,<br /> `impute_with_outcome`, `impute_with_treatment` |
+| Missing data handling      | NA                     | `missing_data`, <br /> `impute_with_outcome`, `impute_with_treatment` |
 | Optimization parameters    | NA                     | `...` |
 
 
@@ -831,9 +832,10 @@ plot(m, which_plots = 2)
 ## Visualizing the Stretch Matrix
 **R**
 ```R
+# Boxplots across `n_repeats` x `n_folds` different matrices learned
 plot(m, which_plots = 1)
 ```
-![png](example/RMALTS_stretch.png)
+![png](example/RMALTS_stretch_mat.png)
 
 ## Looking Inside a Matched Group
 
