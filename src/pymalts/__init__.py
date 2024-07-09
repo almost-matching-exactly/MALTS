@@ -153,12 +153,12 @@ class malts:
         for i in range(Y.shape[0]):
             #finding k closest control units to unit i
             idx = np.argpartition(D_C[i,:],k)
-            matched_df_C = pd.DataFrame( np.hstack( (Xc_C[idx[:k],:], Xd_C[idx[:k],:].reshape((k,len(self.discrete))), Y_C[idx[:k]].reshape(-1,1), D_C[i,idx[:k]].reshape(-1,1), np.zeros((k,1)) ) ), index=df_C.index[idx[:k]], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
+            matched_df_C = pd.DataFrame( np.hstack( (Xc_C[idx[:k],:], Xd_C[idx[:k],:].reshape((k,len(self.discrete))), Y_C[idx[:k]].reshape(-1,1), D_C[i,idx[:k]].reshape(-1,1), np.zeros((k,1)) ) ), index=list(df_C.index[idx[:k]]), columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
             #finding k closest treated units to unit i
             idx = np.argpartition(D_T[i,:],k)
-            matched_df_T = pd.DataFrame( np.hstack( (Xc_T[idx[:k],:], Xd_T[idx[:k],:].reshape((k,len(self.discrete))), Y_T[idx[:k]].reshape(-1,1), D_T[i,idx[:k]].reshape(-1,1), np.ones((k,1)) ) ), index=df_T.index[idx[:k]], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
-            matched_df = pd.DataFrame(np.hstack((Xc[i], Xd[i], Y[i], 0, T[i])).reshape(1,-1), index=['query'], columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment])
-            mmatched_df =  pd.concat([matched_df, matched_df_T, matched_df_C], axis=0)
+            matched_df_T = pd.DataFrame( np.hstack( (Xc_T[idx[:k],:], Xd_T[idx[:k],:].reshape((k,len(self.discrete))), Y_T[idx[:k]].reshape(-1,1), D_T[i,idx[:k]].reshape(-1,1), np.ones((k,1)) ) ), index=list(df_T.index[idx[:k]]), columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment] )
+            matched_df = pd.DataFrame(np.hstack((Xc[i], Xd[i], Y[i], 0, T[i])).reshape(1,-1), index=list(['query']), columns=self.continuous+self.discrete+[self.outcome,'distance',self.treatment])
+            mmatched_df =  pd.concat([matched_df, matched_df_T, matched_df_C], axis=0, levels=1)
             MG[index[i]] = matched_df
             #{'unit':[ Xc[i], Xd[i], Y[i], T[i] ] ,'control':[ matched_Xc_C, matched_Xd_C, matched_Y_C, d_array_C],'treated':[matched_Xc_T, matched_Xd_T, matched_Y_T, d_array_T ]}
         MG_df = pd.concat(MG)
@@ -250,7 +250,7 @@ class malts:
             
         
 class malts_mf:
-    def __init__(self,outcome,treatment,data,discrete=[],C=1,k_tr=15,k_est=50,estimator='linear',smooth_cate=True,reweight=False,n_splits=5,n_repeats=1,output_format='brief'):
+    def __init__(self,outcome,treatment,data,discrete=[], C=1, k_tr=15, k_est=50, estimator='linear', smooth_cate=True, reweight=False,n_splits=5,n_repeats=1,output_format='brief'):
         self.n_splits = n_splits
         self.C = C
         self.k_tr = k_tr
