@@ -186,18 +186,21 @@ class malts:
             diameter = np.max(dist_mat)
             
             if not outcome_discrete:
-                if model=='mean':
-                    yt = np.mean(matched_Y_T)
-                    yc = np.mean(matched_Y_C)
-                    cate[k] = {'CATE': yt - yc,'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
-                if model=='linear':
-                    yc = lm.Ridge().fit( X = matched_X_C, y = matched_Y_C )
-                    yt = lm.Ridge().fit( X = matched_X_T, y = matched_Y_T )
-                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
-                if model=='RF':
-                    yc = ensemble.RandomForestRegressor().fit( X = matched_X_C, y = matched_Y_C )
-                    yt = ensemble.RandomForestRegressor().fit( X = matched_X_T, y = matched_Y_T )
-                    cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
+                try:
+                    if model=='mean':
+                        yt = np.mean(matched_Y_T)
+                        yc = np.mean(matched_Y_C)
+                        cate[k] = {'CATE': yt - yc,'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
+                    if model=='linear':
+                        yc = lm.Ridge().fit( X = matched_X_C, y = matched_Y_C )
+                        yt = lm.Ridge().fit( X = matched_X_T, y = matched_Y_T )
+                        cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
+                    if model=='RF':
+                        yc = ensemble.RandomForestRegressor().fit( X = matched_X_C, y = matched_Y_C )
+                        yt = ensemble.RandomForestRegressor().fit( X = matched_X_T, y = matched_Y_T )
+                        cate[k] = {'CATE': yt.predict(x)[0] - yc.predict(x)[0], 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
+                except:
+                    cate[k] = {'CATE': np.nan, 'outcome':v.loc['query'][self.outcome],'treatment':v.loc['query'][self.treatment],'diameter':diameter }
         return pd.DataFrame.from_dict(cate,orient='index')
     
     def visualizeMG(self,MG,a):
