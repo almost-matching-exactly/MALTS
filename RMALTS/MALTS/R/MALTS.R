@@ -160,7 +160,7 @@ MALTS <- function(data, outcome = 'outcome', treatment = 'treated',
       tmp <- MALTS.int(data[folds != j, ], data[folds == j, ],
                        outcome, treatment, discrete, continuous, info,
                        C, k_tr, k_est,
-                       reweight, estimate_CATEs)
+                       reweight)
       malts_out$M[ind, ] <- tmp$M
       malts_out$MGs[[ind]] <- tmp$MGs
       CATEs[ind, folds != j] <- tmp$CATEs
@@ -202,7 +202,7 @@ make_mapping <- function(data) {
 
 MALTS.int <- function(data, holdout, outcome,
                       treatment, discrete, continuous, info,
-                      C, k_tr, k_est, reweight, estimate_CATEs, ...) {
+                      C, k_tr, k_est, reweight, ...) {
   map_back <- make_mapping(data)
 
   treated <- holdout[treatment] == 1
@@ -281,11 +281,15 @@ MALTS.int <- function(data, holdout, outcome,
 
   MGs <- vector('list', length = n)
 
-  if (info$estimate_CATEs && info$outcome_type == 'continuous') {
+  CATEs_flag <- info$estimate_CATEs && info$outcome_type == 'continuous'
+
+  if (CATEs_flag) {
     Tr <- data[[treatment]]
     Y <- data[[outcome]]
 
     CATEs <- numeric(nrow(data))
+  } else {
+    CATEs <- NULL
   }
   weights <- numeric(nrow(data))
 
@@ -293,7 +297,7 @@ MALTS.int <- function(data, holdout, outcome,
 
     if (data$missing[i]) {
       MGs[[map_back(i)]] <- NULL
-      if (info$estimate_CATEs && info$outcome_type == 'continuous') {
+      if (CATEs_flag) {
         CATEs[i] <- NA
       }
       next
@@ -312,7 +316,7 @@ MALTS.int <- function(data, holdout, outcome,
 
     MG <- c(i, MG)
 
-    if (info$estimate_CATEs) {
+    if (CATEs_flag) {
       CATEs[i] <- estimate_CATEs(i, Tr, Y, MG, info)
     }
 
