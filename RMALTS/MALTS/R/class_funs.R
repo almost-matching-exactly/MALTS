@@ -92,7 +92,7 @@ make_MG <- function(unit, MALTS_out, threshold_n, threshold_p) {
   }
   if (!missing(threshold_p)) {
     # ignoring folds where you were only used for estimation
-    times_matched <- sum(sapply(mout$MGs, function(x) !is.null(x[[1]])))
+    times_matched <- sum(sapply(MALTS_out$MGs, function(x) !is.null(x[[1]])))
     threshold <- threshold_p * times_matched
   }
   else {
@@ -137,7 +137,6 @@ print.mg.malts <-
 #' @param object An object of class \code{mg.malts}
 #' @param ... Additional arguments to be passed on to other methods. Not used.
 #'
-#' @return
 #' @rdname MGs
 #' @export
 summary.mg.malts <- function(object, ...) {
@@ -343,7 +342,7 @@ print.malts <- function(x, digits = getOption('digits'), linewidth = 80, ...) {
   # n_iters <- length(x$cov_sets)
 
   # n_matched <- sum(df$matched)
-  n_matched <- sum(sapply(mout$MGs, function(x) length(x) > 0))
+  n_matched <- sum(sapply(x$MGs, function(x) length(x) > 0))
   n_total <- nrow(df)
 
   indentation <- 2
@@ -521,6 +520,7 @@ plot.malts <- function(x, which_plots = c(1, 2), ...) {
 #' @param smooth A logical scalar denoting whether smoothed loess estimates
 #'   should be added to the plots. Defaults to \code{FALSE}.
 #' @param ... Additional arguments to be passed on to other methods.
+#' @importFrom graphics image
 #' @rdname MGs
 #' @export
 plot.mg.malts <- function(x, cov1, cov2, smooth = FALSE, ...) {
@@ -584,8 +584,8 @@ plot.mg.malts <- function(x, cov1, cov2, smooth = FALSE, ...) {
         mean_mat[i, j] <- mean(tmp[[x$info$outcome]])
       }
     }
-    browser()
-    fields::image.plot(mean_mat, col = viridis(16))
+    # browser()
+    # fields::image.plot(mean_mat, col = viridisLite::viridis(16))
     image(mean_mat)
   }
   else {
@@ -735,7 +735,7 @@ plot_CATE <- function(x, cov1, condition_on, df, smooth = FALSE) {
 #'   and ATC and the corresponding variance of the estimates.
 #'  }
 #' }
-#'
+#' @importFrom stats setNames
 #' @name summary.malts
 NULL
 #> NULL

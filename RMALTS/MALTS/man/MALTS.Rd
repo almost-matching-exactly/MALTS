@@ -174,6 +174,9 @@ with boxplots over multiple runs (\code{n_repeats}) and train-test splits
 (\code{n_folds}). The second plots a density estimate of the estimated CATE
 distribution, where the CATEs are (possibly smoothed) averages over multiple
 runs (\code{n_repeats}) or train-test splits (\code{n_folds}).
+
+\code{plot_CATE} plots estimated CATEs against a feature of choice, allowing
+for conditioning on a subset of the data.
 }
 \examples{
 malts_out <- MALTS(gen_data(n = 500, p = 10))

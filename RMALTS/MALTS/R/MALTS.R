@@ -112,8 +112,9 @@
 #' @importFrom stats model.matrix predict rbinom rnorm var complete.cases median
 #'   density
 #' @importFrom utils flush.console read.csv write.csv
+#' @importFrom quantreg rq
 #' @importFrom graphics abline axis barplot boxplot legend lines points
-#' @importFrom stats as.formula loess.smooth
+#' @importFrom stats as.formula loess.smooth lm sd
 NULL
 #> NULL
 #' @rdname MALTS
