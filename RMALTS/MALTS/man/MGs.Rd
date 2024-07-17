@@ -60,8 +60,6 @@ otherwise, \code{threshold_p} is converted accordingly.
 }
 
 All other entries are as for objects of type \code{malts}
-
-
 }
 \description{
 Create, Print, and Plot Matched Groups from a MALTS fit.
